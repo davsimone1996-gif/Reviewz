@@ -1,12 +1,21 @@
 import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { Users, Zap, Edit2, Check, X } from 'lucide-react'
+import { Edit2, Check, X, UserCheck, UserPlus, Music2 } from 'lucide-react'
 import { followUser, unfollowUser, updateProfile } from '../../lib/supabase'
 import useAuthStore from '../../store/authStore'
 import Avatar from '../UI/Avatar'
 import ScoreBadge from '../UI/ScoreBadge'
 
-export default function ProfileHeader({ profile, isFollowing, isOwn }) {
+function StatPill({ value, label }) {
+  return (
+    <div className="flex flex-col items-center px-4 py-2 bg-surface-200/50 rounded-xl border border-surface-300/30">
+      <span className="text-lg font-bold text-gray-100">{value}</span>
+      <span className="text-xs text-muted">{label}</span>
+    </div>
+  )
+}
+
+export default function ProfileHeader({ profile, isFollowing, isOwn, postCount = 0 }) {
   const { user, setProfile: setStoreProfile } = useAuthStore()
   const qc = useQueryClient()
   const [editing, setEditing] = useState(false)
@@ -30,57 +39,84 @@ export default function ProfileHeader({ profile, isFollowing, isOwn }) {
   })
 
   return (
-    <div className="card p-6">
-      <div className="flex items-start gap-5">
-        <Avatar src={profile.avatar_url} username={profile.username} size="xl" />
+    <div className="card overflow-hidden animate-fade-in-up">
+      {/* Cover banner */}
+      <div className="h-28 sm:h-36 bg-gradient-to-br from-accent/30 via-surface-200 to-surface-100 relative overflow-hidden">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-orange-500/20 via-transparent to-transparent" />
+        <div className="absolute -right-10 -top-10 w-40 h-40 rounded-full bg-accent/10 blur-3xl" />
 
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-3 flex-wrap">
-            <h1 className="text-2xl font-bold">{profile.username}</h1>
-            <ScoreBadge score={profile.social_score} />
+        {/* Cover music icon watermark */}
+        <Music2 size={80} className="absolute right-8 top-4 text-white/5" />
+      </div>
+
+      <div className="px-5 pb-5">
+        {/* Avatar + actions row */}
+        <div className="flex items-end justify-between -mt-10 mb-4">
+          <div className="ring-4 ring-surface-100 rounded-full">
+            <Avatar src={profile.avatar_url} username={profile.username} size="xl" />
           </div>
 
-          <div className="flex gap-5 mt-2 text-sm">
-            <span><strong>{profile.followers_count}</strong> <span className="text-muted">followers</span></span>
-            <span><strong>{profile.following_count}</strong> <span className="text-muted">following</span></span>
+          <div className="flex gap-2 mt-2">
+            {isOwn && !editing && (
+              <button
+                onClick={() => setEditing(true)}
+                className="btn-secondary flex items-center gap-1.5 text-sm py-1.5"
+              >
+                <Edit2 size={13} /> Edit profile
+              </button>
+            )}
+            {!isOwn && user && (
+              <button
+                onClick={() => followMut.mutate()}
+                disabled={followMut.isPending}
+                className={`flex items-center gap-1.5 text-sm py-1.5 ${
+                  isFollowing ? 'btn-secondary' : 'btn-primary'
+                }`}
+              >
+                {isFollowing
+                  ? <><UserCheck size={14} /> Following</>
+                  : <><UserPlus size={14} /> Follow</>}
+              </button>
+            )}
           </div>
-
-          {editing ? (
-            <div className="mt-3 flex gap-2">
-              <input
-                value={bio}
-                onChange={(e) => setBio(e.target.value)}
-                className="input text-sm flex-1"
-                placeholder="Tell us about yourself…"
-                maxLength={200}
-              />
-              <button onClick={() => editMut.mutate()} className="btn-primary px-3 py-1.5">
-                <Check size={14} />
-              </button>
-              <button onClick={() => setEditing(false)} className="btn-secondary px-3 py-1.5">
-                <X size={14} />
-              </button>
-            </div>
-          ) : (
-            <p className="text-muted text-sm mt-2">{profile.bio || (isOwn ? 'No bio yet — click Edit to add one.' : '')}</p>
-          )}
         </div>
 
-        <div className="shrink-0 flex gap-2">
-          {isOwn && !editing && (
-            <button onClick={() => setEditing(true)} className="btn-secondary flex items-center gap-1.5 text-sm py-1.5">
-              <Edit2 size={14} /> Edit
+        {/* Name + score */}
+        <div className="flex items-center gap-2 flex-wrap mb-1">
+          <h1 className="text-2xl font-bold">{profile.username}</h1>
+          <ScoreBadge score={profile.social_score} />
+        </div>
+
+        {/* Bio */}
+        {editing ? (
+          <div className="flex gap-2 mb-4 mt-2">
+            <input
+              value={bio}
+              onChange={(e) => setBio(e.target.value)}
+              className="input text-sm flex-1"
+              placeholder="Tell us about yourself…"
+              maxLength={200}
+              autoFocus
+            />
+            <button onClick={() => editMut.mutate()} className="btn-primary px-3 py-2">
+              <Check size={14} />
             </button>
-          )}
-          {!isOwn && user && (
-            <button
-              onClick={() => followMut.mutate()}
-              disabled={followMut.isPending}
-              className={isFollowing ? 'btn-secondary text-sm py-1.5' : 'btn-primary text-sm py-1.5'}
-            >
-              {isFollowing ? 'Following' : '+ Follow'}
+            <button onClick={() => { setEditing(false); setBio(profile.bio ?? '') }} className="btn-secondary px-3 py-2">
+              <X size={14} />
             </button>
-          )}
+          </div>
+        ) : (
+          <p className="text-muted text-sm mb-4 min-h-[1.25rem]">
+            {profile.bio || (isOwn ? 'No bio yet — click Edit profile to add one.' : '')}
+          </p>
+        )}
+
+        {/* Stats row */}
+        <div className="flex gap-3 flex-wrap">
+          <StatPill value={postCount}                   label="Reviews"   />
+          <StatPill value={profile.followers_count}     label="Followers"  />
+          <StatPill value={profile.following_count}     label="Following"  />
+          <StatPill value={profile.social_score}        label="Score"      />
         </div>
       </div>
     </div>

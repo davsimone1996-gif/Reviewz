@@ -1,6 +1,6 @@
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { Heart, ExternalLink, Trash2, Music, Disc3, ArrowLeft, Loader2 } from 'lucide-react'
+import { Heart, ExternalLink, Trash2, Music, Disc3, ArrowLeft, Loader2, Share2 } from 'lucide-react'
 import { useState } from 'react'
 import { formatDistanceToNow } from 'date-fns'
 import { usePost } from '../hooks/usePost'
@@ -12,132 +12,175 @@ import StarRating from '../components/UI/StarRating'
 import Spinner from '../components/UI/Spinner'
 import ScoreBadge from '../components/UI/ScoreBadge'
 
-export default function PostDetailPage() {
-  const { id }  = useParams()
-  const { user, profile } = useAuthStore()
-  const navigate  = useNavigate()
-  const qc        = useQueryClient()
+function ratingColor(r) {
+  if (r >= 8) return 'from-emerald-500/30'
+  if (r >= 6) return 'from-amber-500/30'
+  if (r >= 4) return 'from-orange-500/30'
+  return 'from-red-500/30'
+}
 
+export default function PostDetailPage() {
+  const { id }            = useParams()
+  const { user }          = useAuthStore()
+  const navigate          = useNavigate()
+  const qc                = useQueryClient()
   const { data: post, isLoading } = usePost(id)
 
-  const [liked, setLiked]   = useState(false)
-  const [likes, setLikes]   = useState(0)
-
-  // Sync like state when post loads
-  const initialized = post && !isLoading
+  const [liked, setLiked] = useState(false)
+  const [heartAnim, setHeartAnim] = useState(false)
 
   const handleLike = async () => {
     if (!user || !post) return
+    setHeartAnim(false)
+    requestAnimationFrame(() => setHeartAnim(true))
     if (liked) {
       await unlikePost(user.id, post.id)
       setLiked(false)
-      setLikes((l) => l - 1)
     } else {
       await likePost(user.id, post.id)
       setLiked(true)
-      setLikes((l) => l + 1)
     }
+  }
+
+  const handleShare = () => {
+    navigator.clipboard?.writeText(window.location.href)
+      .then(() => alert('Link copied!'))
   }
 
   const deleteMut = useMutation({
     mutationFn: () => deletePost(post.id),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['feed'] })
-      navigate('/')
-    },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['feed'] }); navigate('/') },
   })
 
   if (isLoading) return (
-    <div className="flex justify-center py-16"><Spinner className="w-8 h-8" /></div>
+    <div className="flex justify-center py-24"><Spinner className="w-8 h-8" /></div>
   )
-  if (!post) return <div className="text-center py-16 text-muted">Review not found.</div>
+  if (!post) return (
+    <div className="text-center py-24">
+      <p className="text-5xl mb-4">🎵</p>
+      <p className="text-muted">Review not found.</p>
+      <Link to="/" className="btn-primary mt-4 inline-flex">Back to Feed</Link>
+    </div>
+  )
 
   const p = post.profiles
 
   return (
-    <div className="max-w-2xl mx-auto space-y-5">
-      <Link to="/" className="flex items-center gap-1.5 text-muted hover:text-gray-100 text-sm transition-colors">
+    <div className="max-w-2xl mx-auto space-y-5 animate-fade-in-up">
+      {/* Back */}
+      <Link to="/" className="inline-flex items-center gap-1.5 text-muted hover:text-gray-100 text-sm transition-colors">
         <ArrowLeft size={15} /> Back to Feed
       </Link>
 
       {/* Main card */}
       <div className="card overflow-hidden">
-        {/* Album art header */}
-        {post.cover_url && (
-          <div className="relative h-48 overflow-hidden">
-            <img
-              src={post.cover_url}
-              alt=""
-              className="w-full h-full object-cover blur-sm scale-110 brightness-50"
-            />
-            <div className="absolute inset-0 flex items-end p-5 gap-4">
-              <img src={post.cover_url} alt={post.title} className="w-24 h-24 rounded-xl shadow-2xl object-cover" />
-              <div className="min-w-0">
-                <div className="flex items-center gap-1.5 mb-1">
-                  {post.spotify_type === 'track' ? <Music size={14} className="text-white/70" /> : <Disc3 size={14} className="text-white/70" />}
-                  <span className="text-xs text-white/70 uppercase tracking-wide">{post.spotify_type}</span>
-                </div>
-                <h1 className="text-xl font-bold text-white truncate">{post.title}</h1>
-                <p className="text-white/80 truncate">{post.artist}</p>
+        {/* Cinematic hero */}
+        <div className="relative h-56 sm:h-64 overflow-hidden">
+          {post.cover_url ? (
+            <>
+              <img
+                src={post.cover_url}
+                alt=""
+                className="absolute inset-0 w-full h-full object-cover scale-110 blur-2xl brightness-40"
+              />
+              {/* Rating tint overlay */}
+              <div className={`absolute inset-0 bg-gradient-to-br ${ratingColor(post.rating)} to-transparent opacity-60`} />
+              <div className="absolute inset-0 bg-gradient-to-t from-surface-100 via-transparent to-transparent" />
+            </>
+          ) : (
+            <div className="absolute inset-0 bg-gradient-to-br from-surface-200 to-surface-100" />
+          )}
+
+          {/* Content over hero */}
+          <div className="absolute inset-0 flex items-end p-5 gap-4">
+            {post.cover_url && (
+              <img
+                src={post.cover_url}
+                alt={post.title}
+                className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl shadow-2xl object-cover border-2 border-white/10 shrink-0"
+              />
+            )}
+            <div className="min-w-0 pb-1">
+              <div className="flex items-center gap-2 mb-1.5">
+                <span className="badge bg-black/40 text-white/70 backdrop-blur-sm text-xs">
+                  {post.spotify_type === 'track' ? <><Music size={10}/> Track</> : <><Disc3 size={10}/> Album</>}
+                </span>
               </div>
+              <h1 className="text-xl sm:text-2xl font-bold text-white leading-tight drop-shadow-lg truncate">
+                {post.title}
+              </h1>
+              <p className="text-white/70 mt-0.5 drop-shadow truncate">{post.artist}</p>
             </div>
           </div>
-        )}
+        </div>
 
-        <div className="p-5 space-y-4">
-          {/* Rating */}
+        <div className="p-5 space-y-5">
+          {/* Rating + Spotify link */}
           <div className="flex items-center justify-between">
             <StarRating value={post.rating} size="lg" />
             <a
               href={post.spotify_url}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-1.5 text-sm text-green-400 hover:text-green-300 transition-colors"
+              className="flex items-center gap-1.5 text-sm font-medium text-[#1DB954] hover:text-[#1ed760] transition-colors"
             >
               <ExternalLink size={14} /> Open in Spotify
             </a>
           </div>
 
-          {/* Review text */}
-          <p className="text-gray-200 leading-relaxed whitespace-pre-wrap">{post.review_text}</p>
-
-          {/* Author */}
-          <div className="flex items-center justify-between pt-2 border-t border-surface-200">
-            <Link to={`/profile/${p?.username}`} className="flex items-center gap-2 group">
-              <Avatar src={p?.avatar_url} username={p?.username} size="md" />
-              <div>
-                <p className="font-medium group-hover:text-accent transition-colors">{p?.username}</p>
-                <ScoreBadge score={p?.social_score ?? 0} />
-              </div>
-            </Link>
-            <span className="text-xs text-muted">
-              {formatDistanceToNow(new Date(post.created_at), { addSuffix: true })}
-            </span>
+          {/* Review */}
+          <div className="bg-surface-200/40 rounded-xl p-4 border border-surface-300/30">
+            <p className="text-gray-200 leading-relaxed whitespace-pre-wrap text-[15px]">{post.review_text}</p>
           </div>
 
-          {/* Actions */}
-          <div className="flex items-center gap-4 pt-1">
+          {/* Author row */}
+          <div className="flex items-center justify-between pt-1">
+            <Link to={`/profile/${p?.username}`} className="flex items-center gap-3 group">
+              <Avatar src={p?.avatar_url} username={p?.username} size="md" />
+              <div>
+                <p className="font-semibold group-hover:text-accent transition-colors">{p?.username}</p>
+                <div className="flex items-center gap-2">
+                  <ScoreBadge score={p?.social_score ?? 0} />
+                  <span className="text-xs text-muted">
+                    {formatDistanceToNow(new Date(post.created_at), { addSuffix: true })}
+                  </span>
+                </div>
+              </div>
+            </Link>
+
+            <div className="flex items-center gap-2">
+              {/* Share */}
+              <button onClick={handleShare} className="btn-ghost p-2" title="Copy link">
+                <Share2 size={15} />
+              </button>
+              {/* Delete */}
+              {user?.id === post.user_id && (
+                <button
+                  onClick={() => { if (confirm('Delete this review?')) deleteMut.mutate() }}
+                  disabled={deleteMut.isPending}
+                  className="btn-ghost p-2 text-muted hover:text-red-400"
+                >
+                  {deleteMut.isPending ? <Loader2 size={15} className="animate-spin" /> : <Trash2 size={15} />}
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Like */}
+          <div className="flex items-center gap-4 pt-1 border-t border-surface-200/40">
             <button
               onClick={handleLike}
               disabled={!user}
-              className={`flex items-center gap-1.5 text-sm transition-colors ${liked ? 'text-red-400' : 'text-muted hover:text-red-400'} disabled:opacity-50`}
+              className={`flex items-center gap-2 font-semibold text-sm transition-colors disabled:opacity-40
+                ${liked ? 'text-red-400' : 'text-muted hover:text-red-400'}`}
             >
-              <Heart size={16} className={liked ? 'fill-red-400' : ''} />
+              <Heart
+                size={18}
+                className={`transition-all ${liked ? 'fill-red-400' : ''} ${heartAnim ? 'animate-heart' : ''}`}
+                onAnimationEnd={() => setHeartAnim(false)}
+              />
               {post.likes_count + (liked ? 1 : 0)} likes
             </button>
-
-            {user?.id === post.user_id && (
-              <button
-                onClick={() => {
-                  if (confirm('Delete this review?')) deleteMut.mutate()
-                }}
-                disabled={deleteMut.isPending}
-                className="flex items-center gap-1.5 text-sm text-muted hover:text-red-400 transition-colors ml-auto"
-              >
-                {deleteMut.isPending ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
-                Delete
-              </button>
-            )}
           </div>
         </div>
       </div>
