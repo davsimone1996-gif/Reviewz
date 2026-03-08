@@ -79,6 +79,7 @@ export default function SearchPage() {
     queryKey: ['spotify-search', q],
     queryFn: () => searchSpotify(q, 'both', 12),
     enabled: q.length > 1,
+    retry: false,
   })
 
   const { data: profilesData, isLoading: profilesLoading, error: profilesError } = useQuery({
@@ -93,11 +94,11 @@ export default function SearchPage() {
     if (input.trim()) setSearchParams({ q: input.trim() })
   }
 
-  const tracks   = musicData?.tracks ?? []
-  const albums   = musicData?.albums ?? []
-  const profiles = profilesData ?? []
-  const loading  = musicLoading || musicFetching || profilesLoading
-  const total    = tracks.length + albums.length + profiles.length
+  const tracks      = musicData?.tracks ?? []
+  const albums      = musicData?.albums ?? []
+  const profiles    = profilesData ?? []
+  const musicDone   = !musicLoading && !musicFetching
+  const total       = tracks.length + albums.length + profiles.length
 
   return (
     <div className="max-w-2xl mx-auto space-y-6 animate-fade-in">
@@ -127,19 +128,12 @@ export default function SearchPage() {
         </div>
       )}
 
-      {loading && (
+      {/* Global spinner: only while profiles (Supabase) are loading */}
+      {profilesLoading && q && (
         <div className="flex justify-center py-12"><Spinner className="w-7 h-7" /></div>
       )}
 
-      {!loading && q && total === 0 && (
-        <div className="card p-10 text-center">
-          <p className="text-4xl mb-3">🔍</p>
-          <p className="font-semibold">No results for "{q}"</p>
-          <p className="text-muted text-sm mt-1">Try a different search term</p>
-        </div>
-      )}
-
-      {!loading && !q && (
+      {!q && (
         <div className="card p-10 text-center">
           <p className="text-4xl mb-3">🎵</p>
           <p className="font-semibold">Search for anything</p>
@@ -147,9 +141,23 @@ export default function SearchPage() {
         </div>
       )}
 
-      {!loading && total > 0 && (
+      {/* Results area — visible as soon as profiles are done, music loads independently */}
+      {!profilesLoading && q && (
         <div className="space-y-6">
-          <p className="text-sm text-muted">{total} results for "{q}"</p>
+          {musicDone && total === 0 && (
+            <div className="card p-10 text-center">
+              <p className="text-4xl mb-3">🔍</p>
+              <p className="font-semibold">No results for "{q}"</p>
+              <p className="text-muted text-sm mt-1">Try a different search term</p>
+            </div>
+          )}
+
+          {total > 0 && (
+            <p className="text-sm text-muted">
+              {total} result{total !== 1 ? 's' : ''} for "{q}"
+              {!musicDone && ' (searching music…)'}
+            </p>
+          )}
 
           {profiles.length > 0 && (
             <div className="space-y-2">
@@ -162,7 +170,15 @@ export default function SearchPage() {
             </div>
           )}
 
-          {tracks.length > 0 && (
+          {/* Music loading indicator shown inline while Spotify is still fetching */}
+          {!musicDone && (
+            <div className="flex items-center gap-2 text-muted text-sm py-2">
+              <Spinner className="w-4 h-4" />
+              <span>Searching music…</span>
+            </div>
+          )}
+
+          {musicDone && tracks.length > 0 && (
             <div className="space-y-2">
               <h2 className="text-sm font-bold text-muted uppercase tracking-wider flex items-center gap-2">
                 <Music size={13} /> Tracks
@@ -173,7 +189,7 @@ export default function SearchPage() {
             </div>
           )}
 
-          {albums.length > 0 && (
+          {musicDone && albums.length > 0 && (
             <div className="space-y-2">
               <h2 className="text-sm font-bold text-muted uppercase tracking-wider flex items-center gap-2">
                 <Disc3 size={13} /> Albums
