@@ -111,3 +111,13 @@ export async function getAlbum(spotifyId) {
   const data = await spotifyFetch(`/albums/${spotifyId}`)
   return normaliseAlbum(data)
 }
+
+/**
+ * Fetch new releases (uses client credentials – no user auth needed)
+ * @param {string} market  ISO 3166-1 alpha-2 country code (default 'IT')
+ * @param {number} limit
+ */
+export async function getNewReleases(market = 'IT', limit = 20) {
+  const data = await spotifyFetch(`/browse/new-releases?market=${market}&limit=${limit}`)
+  return (data.albums?.items ?? []).map(normaliseAlbum)
+}

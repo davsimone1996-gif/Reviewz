@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { Edit2, Check, X, UserCheck, UserPlus, Music2, LogOut } from 'lucide-react'
-import { followUser, unfollowUser, updateProfile } from '../../lib/supabase'
+import { Edit2, Check, X, UserCheck, UserPlus, Music2, Headphones, LogOut } from 'lucide-react'
+import { followUser, unfollowUser, updateProfile, updateNowPlaying } from '../../lib/supabase'
+import { startSpotifyAuth, isSpotifyConnected, getCurrentlyPlaying, clearSpotifyTokens } from '../../lib/spotifyAuth'
 import useAuthStore from '../../store/authStore'
 import Avatar from '../UI/Avatar'
 import ScoreBadge from '../UI/ScoreBadge'
@@ -15,11 +16,70 @@ function StatPill({ value, label }) {
   )
 }
 
+function NowPlayingBadge({ track }) {
+  if (!track) return null
+  return (
+    <a
+      href={track.now_playing_url ?? '#'}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="flex items-center gap-2 mt-1 group"
+    >
+      <span className="relative flex h-2 w-2">
+        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
+        <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500" />
+      </span>
+      <Headphones size={12} className="text-green-400 shrink-0" />
+      {track.now_playing_cover_url && (
+        <img
+          src={track.now_playing_cover_url}
+          alt=""
+          className="w-5 h-5 rounded object-cover shrink-0"
+        />
+      )}
+      <span className="text-xs text-green-400 truncate max-w-[200px] group-hover:underline">
+        {track.now_playing_title} · {track.now_playing_artist}
+      </span>
+    </a>
+  )
+}
+
 export default function ProfileHeader({ profile, isFollowing, isOwn, postCount = 0 }) {
   const { user, setProfile: setStoreProfile, logout } = useAuthStore()
   const qc = useQueryClient()
-  const [editing, setEditing] = useState(false)
-  const [bio, setBio]         = useState(profile.bio ?? '')
+  const [editing, setEditing]         = useState(false)
+  const [bio, setBio]                 = useState(profile.bio ?? '')
+  const [spotifyConnected, setSpotifyConnected] = useState(false)
+
+  // Check Spotify connection status on mount (only for own profile)
+  useEffect(() => {
+    if (!isOwn) return
+    setSpotifyConnected(isSpotifyConnected())
+  }, [isOwn])
+
+  // Fetch + store currently playing (only when viewing own profile)
+  useEffect(() => {
+    if (!isOwn || !user) return
+    if (!isSpotifyConnected()) return
+
+    let cancelled = false
+
+    const sync = async () => {
+      try {
+        const track = await getCurrentlyPlaying()
+        if (!cancelled) {
+          await updateNowPlaying(user.id, track)
+          qc.invalidateQueries({ queryKey: ['profile', profile.username] })
+        }
+      } catch (e) {
+        console.error('Currently playing sync error:', e)
+      }
+    }
+
+    sync()
+    const interval = setInterval(sync, 30_000) // refresh every 30s
+    return () => { cancelled = true; clearInterval(interval) }
+  }, [isOwn, user, profile.username, qc])
 
   const followMut = useMutation({
     mutationFn: () =>
@@ -50,14 +110,23 @@ export default function ProfileHeader({ profile, isFollowing, isOwn, postCount =
     },
   })
 
+  const handleDisconnectSpotify = () => {
+    clearSpotifyTokens()
+    setSpotifyConnected(false)
+    updateNowPlaying(user.id, null).catch(() => {})
+    qc.invalidateQueries({ queryKey: ['profile', profile.username] })
+  }
+
+  const nowPlaying = profile.now_playing_title
+    ? profile
+    : null
+
   return (
     <div className="card overflow-hidden animate-fade-in-up">
       {/* Cover banner */}
       <div className="h-28 sm:h-36 bg-gradient-to-br from-accent/30 via-surface-200 to-surface-100 relative overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-orange-500/20 via-transparent to-transparent" />
         <div className="absolute -right-10 -top-10 w-40 h-40 rounded-full bg-accent/10 blur-3xl" />
-
-        {/* Cover music icon watermark */}
         <Music2 size={80} className="absolute right-8 top-4 text-white/5" />
       </div>
 
@@ -109,6 +178,31 @@ export default function ProfileHeader({ profile, isFollowing, isOwn, postCount =
           <ScoreBadge score={profile.social_score} />
         </div>
 
+        {/* Now Playing */}
+        <NowPlayingBadge track={nowPlaying} />
+
+        {/* Spotify Connect / Disconnect (solo profilo proprio) */}
+        {isOwn && (
+          <div className="mt-2 mb-2">
+            {spotifyConnected ? (
+              <button
+                onClick={handleDisconnectSpotify}
+                className="text-xs text-muted hover:text-red-400 underline transition-colors"
+              >
+                Disconnetti Spotify
+              </button>
+            ) : (
+              <button
+                onClick={startSpotifyAuth}
+                className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-green-500/10 hover:bg-green-500/20 text-green-400 border border-green-500/20 transition-colors"
+              >
+                <Music2 size={12} />
+                Connetti Spotify per mostrare cosa stai ascoltando
+              </button>
+            )}
+          </div>
+        )}
+
         {/* Bio */}
         {editing ? (
           <div className="flex gap-2 mb-4 mt-2">
@@ -135,10 +229,10 @@ export default function ProfileHeader({ profile, isFollowing, isOwn, postCount =
 
         {/* Stats row */}
         <div className="flex gap-3 flex-wrap">
-          <StatPill value={postCount}                   label="Reviews"   />
-          <StatPill value={profile.followers_count}     label="Followers"  />
-          <StatPill value={profile.following_count}     label="Following"  />
-          <StatPill value={profile.social_score}        label="Score"      />
+          <StatPill value={postCount}               label="Reviews"   />
+          <StatPill value={profile.followers_count} label="Followers"  />
+          <StatPill value={profile.following_count} label="Following"  />
+          <StatPill value={profile.social_score}    label="Score"      />
         </div>
       </div>
     </div>

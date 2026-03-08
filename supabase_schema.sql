@@ -251,12 +251,102 @@ left join (select following_id, count(*) as cnt from public.follows group by fol
 left join (select follower_id,  count(*) as cnt from public.follows group by follower_id)  f2 on f2.follower_id  = p.id;
 
 -- ────────────────────────────────────────────────────────────
+-- MIGRATION: Now Playing columns on profiles
+-- Run this if the DB already exists (skip on fresh install)
+-- ────────────────────────────────────────────────────────────
+alter table public.profiles
+  add column if not exists now_playing_title     text,
+  add column if not exists now_playing_artist    text,
+  add column if not exists now_playing_cover_url text,
+  add column if not exists now_playing_url       text,
+  add column if not exists now_playing_updated_at timestamptz;
+
+-- ────────────────────────────────────────────────────────────
+-- TABLE: notifications
+-- ────────────────────────────────────────────────────────────
+create table public.notifications (
+  id         uuid primary key default uuid_generate_v4(),
+  user_id    uuid not null references public.profiles(id) on delete cascade,   -- recipient
+  actor_id   uuid not null references public.profiles(id) on delete cascade,   -- who triggered it
+  type       text not null check (type in ('follow', 'like', 'comment')),
+  post_id    uuid references public.posts(id) on delete cascade,
+  read       boolean not null default false,
+  created_at timestamptz not null default now()
+);
+
+alter table public.notifications enable row level security;
+
+create policy "Users can view their own notifications"
+  on public.notifications for select using (auth.uid() = user_id);
+
+create policy "System can insert notifications"
+  on public.notifications for insert with check (true);
+
+create policy "Users can mark their notifications as read"
+  on public.notifications for update using (auth.uid() = user_id);
+
+-- Trigger: notify on follow
+create or replace function public.notify_on_follow()
+returns trigger language plpgsql security definer as $$
+begin
+  insert into public.notifications (user_id, actor_id, type)
+  values (NEW.following_id, NEW.follower_id, 'follow');
+  return NEW;
+end;
+$$;
+
+create trigger on_follow_notify
+  after insert on public.follows
+  for each row execute function public.notify_on_follow();
+
+-- Trigger: notify on like (post only)
+create or replace function public.notify_on_like()
+returns trigger language plpgsql security definer as $$
+declare
+  post_author uuid;
+begin
+  if NEW.post_id is null then return NEW; end if;
+  select user_id into post_author from public.posts where id = NEW.post_id;
+  -- Don't notify yourself
+  if post_author = NEW.user_id then return NEW; end if;
+  insert into public.notifications (user_id, actor_id, type, post_id)
+  values (post_author, NEW.user_id, 'like', NEW.post_id);
+  return NEW;
+end;
+$$;
+
+create trigger on_like_notify
+  after insert on public.likes
+  for each row execute function public.notify_on_like();
+
+-- Trigger: notify on comment
+create or replace function public.notify_on_comment()
+returns trigger language plpgsql security definer as $$
+declare
+  post_author uuid;
+begin
+  select user_id into post_author from public.posts where id = NEW.post_id;
+  -- Don't notify yourself
+  if post_author = NEW.user_id then return NEW; end if;
+  insert into public.notifications (user_id, actor_id, type, post_id)
+  values (post_author, NEW.user_id, 'comment', NEW.post_id);
+  return NEW;
+end;
+$$;
+
+create trigger on_comment_notify
+  after insert on public.comments
+  for each row execute function public.notify_on_comment();
+
+-- ────────────────────────────────────────────────────────────
 -- INDEXES
 -- ────────────────────────────────────────────────────────────
-create index posts_user_id_idx         on public.posts(user_id);
-create index posts_created_at_idx      on public.posts(created_at desc);
-create index comments_post_id_idx      on public.comments(post_id);
-create index likes_post_id_idx         on public.likes(post_id);
-create index likes_comment_id_idx      on public.likes(comment_id);
-create index follows_follower_id_idx   on public.follows(follower_id);
-create index follows_following_id_idx  on public.follows(following_id);
+create index posts_user_id_idx              on public.posts(user_id);
+create index posts_created_at_idx           on public.posts(created_at desc);
+create index comments_post_id_idx           on public.comments(post_id);
+create index likes_post_id_idx              on public.likes(post_id);
+create index likes_comment_id_idx           on public.likes(comment_id);
+create index follows_follower_id_idx        on public.follows(follower_id);
+create index follows_following_id_idx       on public.follows(following_id);
+create index notifications_user_id_idx      on public.notifications(user_id);
+create index notifications_created_at_idx   on public.notifications(created_at desc);

@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
-import { Search, PlusCircle, LogOut, X } from 'lucide-react'
+import { Search, PlusCircle, LogOut, X, Disc3 } from 'lucide-react'
 import useAuthStore from '../../store/authStore'
 import AuthModal from '../Auth/AuthModal'
 import Avatar from '../UI/Avatar'
 import ScoreBadge from '../UI/ScoreBadge'
+import NotificationBell from '../UI/NotificationBell'
 
 export default function Navbar() {
   const [showAuth, setShowAuth] = useState(false)
@@ -55,6 +56,19 @@ export default function Navbar() {
             </div>
           </form>
 
+          {/* Nuove Uscite link */}
+          <Link
+            to="/nuove-uscite"
+            className={`hidden md:flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-xl transition-colors ${
+              location.pathname === '/nuove-uscite'
+                ? 'bg-accent/20 text-accent'
+                : 'text-muted hover:text-gray-100 hover:bg-surface-200'
+            }`}
+          >
+            <Disc3 size={15} />
+            <span>Nuove Uscite</span>
+          </Link>
+
           <div className="flex-1" />
 
           {/* Mobile search toggle */}
@@ -75,6 +89,9 @@ export default function Navbar() {
                 <PlusCircle size={15} />
                 <span>Review</span>
               </Link>
+
+              {/* Notification Bell */}
+              <NotificationBell userId={user.id} />
 
               {/* User menu */}
               <Link
@@ -122,6 +139,13 @@ export default function Navbar() {
                 />
               </div>
             </form>
+            {/* Mobile Nuove Uscite link */}
+            <Link
+              to="/nuove-uscite"
+              className="flex items-center gap-1.5 mt-2 text-sm text-muted hover:text-gray-100 px-2"
+            >
+              <Disc3 size={14} /> Nuove Uscite Musicali
+            </Link>
           </div>
         )}
       </header>

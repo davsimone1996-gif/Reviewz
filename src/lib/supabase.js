@@ -198,6 +198,32 @@ export const fetchUserLikes = async (userId, postIds) => {
   return data.map((l) => l.post_id)
 }
 
+// ─── Now Playing helpers ──────────────────────────────────────────
+
+export const updateNowPlaying = async (userId, nowPlaying) => {
+  const updates = nowPlaying
+    ? {
+        now_playing_title:     nowPlaying.title,
+        now_playing_artist:    nowPlaying.artist,
+        now_playing_cover_url: nowPlaying.cover_url,
+        now_playing_url:       nowPlaying.spotify_url,
+        now_playing_updated_at: new Date().toISOString(),
+      }
+    : {
+        now_playing_title:     null,
+        now_playing_artist:    null,
+        now_playing_cover_url: null,
+        now_playing_url:       null,
+        now_playing_updated_at: null,
+      }
+
+  const { error } = await supabase
+    .from('profiles')
+    .update(updates)
+    .eq('id', userId)
+  if (error) throw error
+}
+
 // ─── Follow helpers ───────────────────────────────────────────────
 
 export const followUser = async (followerId, followingId) => {
@@ -224,4 +250,36 @@ export const checkIsFollowing = async (followerId, followingId) => {
     .eq('following_id', followingId)
     .maybeSingle()
   return !!data
+}
+
+// ─── Notification helpers ─────────────────────────────────────────
+
+export const fetchNotifications = async (userId, limit = 30) => {
+  const { data, error } = await supabase
+    .from('notifications')
+    .select('*, actor:profiles!notifications_actor_id_fkey(id, username, avatar_url)')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false })
+    .limit(limit)
+  if (error) throw error
+  return data
+}
+
+export const markNotificationsRead = async (userId) => {
+  const { error } = await supabase
+    .from('notifications')
+    .update({ read: true })
+    .eq('user_id', userId)
+    .eq('read', false)
+  if (error) throw error
+}
+
+export const getUnreadNotificationsCount = async (userId) => {
+  const { count, error } = await supabase
+    .from('notifications')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', userId)
+    .eq('read', false)
+  if (error) throw error
+  return count ?? 0
 }
