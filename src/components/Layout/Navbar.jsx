@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
-import { Search, PlusCircle, LogOut, Music2, X, Disc3 } from 'lucide-react'
+import { Search, PlusCircle, LogOut, X, Disc3 } from 'lucide-react'
 import useAuthStore from '../../store/authStore'
 import AuthModal from '../Auth/AuthModal'
 import Avatar from '../UI/Avatar'
@@ -39,9 +39,7 @@ export default function Navbar() {
 
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2 shrink-0 group">
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-accent to-orange-400 flex items-center justify-center shadow-lg shadow-accent/30 group-hover:shadow-accent/50 transition-shadow">
-              <Music2 size={16} className="text-white" />
-            </div>
+            <img src="/logo.png" alt="Reviewz" className="w-8 h-8 rounded-xl object-cover shadow-lg shadow-accent/30 group-hover:shadow-accent/50 transition-shadow" />
             <span className="font-bold text-base text-gradient hidden sm:block">Reviewz</span>
           </Link>
 
@@ -83,13 +81,13 @@ export default function Navbar() {
 
           {user ? (
             <div className="flex items-center gap-2">
-              {/* Create review button */}
+              {/* Create review button — hidden on mobile (in bottom nav) */}
               <Link
                 to="/create"
-                className="btn-primary flex items-center gap-1.5 py-1.5 px-3 text-sm"
+                className="hidden sm:flex btn-primary items-center gap-1.5 py-1.5 px-3 text-sm"
               >
                 <PlusCircle size={15} />
-                <span className="hidden sm:block">Review</span>
+                <span>Review</span>
               </Link>
 
               {/* Notification Bell */}
@@ -107,10 +105,11 @@ export default function Navbar() {
                 </div>
               </Link>
 
+              {/* Logout — hidden on mobile */}
               <button
                 onClick={logout}
                 title="Sign out"
-                className="btn-ghost p-2 text-muted hover:text-red-400"
+                className="hidden sm:block btn-ghost p-2 text-muted hover:text-red-400"
               >
                 <LogOut size={15} />
               </button>
