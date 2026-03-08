@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
-import { Search, PlusCircle, LogOut, Music2, X } from 'lucide-react'
+import { Search, PlusCircle, LogOut, X } from 'lucide-react'
 import useAuthStore from '../../store/authStore'
 import AuthModal from '../Auth/AuthModal'
 import Avatar from '../UI/Avatar'
@@ -38,9 +38,7 @@ export default function Navbar() {
 
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2 shrink-0 group">
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-accent to-orange-400 flex items-center justify-center shadow-lg shadow-accent/30 group-hover:shadow-accent/50 transition-shadow">
-              <Music2 size={16} className="text-white" />
-            </div>
+            <img src="/logo.png" alt="Reviewz" className="w-8 h-8 rounded-xl object-cover shadow-lg shadow-accent/30 group-hover:shadow-accent/50 transition-shadow" />
             <span className="font-bold text-base text-gradient hidden sm:block">Reviewz</span>
           </Link>
 
