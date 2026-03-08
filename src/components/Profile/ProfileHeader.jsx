@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { Edit2, Check, X, UserCheck, UserPlus, Music2 } from 'lucide-react'
+import { Edit2, Check, X, UserCheck, UserPlus, Music2, LogOut } from 'lucide-react'
 import { followUser, unfollowUser, updateProfile } from '../../lib/supabase'
 import useAuthStore from '../../store/authStore'
 import Avatar from '../UI/Avatar'
@@ -16,7 +16,7 @@ function StatPill({ value, label }) {
 }
 
 export default function ProfileHeader({ profile, isFollowing, isOwn, postCount = 0 }) {
-  const { user, setProfile: setStoreProfile } = useAuthStore()
+  const { user, setProfile: setStoreProfile, logout } = useAuthStore()
   const qc = useQueryClient()
   const [editing, setEditing] = useState(false)
   const [bio, setBio]         = useState(profile.bio ?? '')
@@ -26,7 +26,19 @@ export default function ProfileHeader({ profile, isFollowing, isOwn, postCount =
       isFollowing
         ? unfollowUser(user.id, profile.id)
         : followUser(user.id, profile.id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['profile', profile.username] }),
+    onMutate: async () => {
+      await qc.cancelQueries({ queryKey: ['following', user?.id, profile.id] })
+      const prev = qc.getQueryData(['following', user?.id, profile.id])
+      qc.setQueryData(['following', user?.id, profile.id], !isFollowing)
+      return { prev }
+    },
+    onError: (_err, _vars, context) => {
+      qc.setQueryData(['following', user?.id, profile.id], context?.prev)
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['profile', profile.username] })
+      qc.invalidateQueries({ queryKey: ['following', user?.id, profile.id] })
+    },
   })
 
   const editMut = useMutation({
@@ -58,12 +70,22 @@ export default function ProfileHeader({ profile, isFollowing, isOwn, postCount =
 
           <div className="flex gap-2 mt-2">
             {isOwn && !editing && (
-              <button
-                onClick={() => setEditing(true)}
-                className="btn-secondary flex items-center gap-1.5 text-sm py-1.5"
-              >
-                <Edit2 size={13} /> Edit profile
-              </button>
+              <>
+                <button
+                  onClick={() => setEditing(true)}
+                  className="btn-secondary flex items-center gap-1.5 text-sm py-1.5"
+                >
+                  <Edit2 size={13} /> Edit profile
+                </button>
+                {/* Logout — visible on mobile only (hidden on sm+ where navbar logout is shown) */}
+                <button
+                  onClick={logout}
+                  title="Sign out"
+                  className="sm:hidden btn-secondary p-2 text-muted hover:text-red-400"
+                >
+                  <LogOut size={15} />
+                </button>
+              </>
             )}
             {!isOwn && user && (
               <button
