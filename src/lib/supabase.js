@@ -62,9 +62,12 @@ export const updateProfile = async (userId, updates) => {
 // ─── Post helpers ────────────────────────────────────────────────
 
 export const createPost = async (post) => {
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (authError || !user) throw new Error('Not authenticated. Please sign in again.')
+
   const { data, error } = await supabase
     .from('posts')
-    .insert(post)
+    .insert({ ...post, user_id: user.id })
     .select('*, profiles(*)')
     .single()
   if (error) throw error
