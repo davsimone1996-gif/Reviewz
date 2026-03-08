@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { X, Music2 } from 'lucide-react'
+import { X } from 'lucide-react'
 import LoginForm from './LoginForm'
 import RegisterForm from './RegisterForm'
 
@@ -23,9 +23,7 @@ export default function AuthModal({ onClose }) {
         {/* Header */}
         <div className="p-8 pb-0">
           <div className="flex flex-col items-center mb-6">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-accent to-orange-400 flex items-center justify-center shadow-xl shadow-accent/30 mb-3">
-              <Music2 size={22} className="text-white" />
-            </div>
+            <img src="/logo.png" alt="Reviewz" className="w-12 h-12 rounded-2xl object-cover shadow-xl shadow-accent/30 mb-3" />
             <h2 className="text-xl font-bold text-gradient">Reviewz</h2>
             <p className="text-muted text-sm mt-0.5">
               {view === 'login' ? 'Welcome back 👋' : 'Join the community 🎵'}
