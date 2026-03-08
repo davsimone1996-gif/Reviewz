@@ -148,10 +148,6 @@ export default function PostDetailPage() {
             </Link>
 
             <div className="flex items-center gap-2">
-              {/* Share */}
-              <button onClick={handleShare} className="btn-ghost p-2" title="Copy link">
-                <Share2 size={15} />
-              </button>
               {/* Delete */}
               {user?.id === post.user_id && (
                 <button
