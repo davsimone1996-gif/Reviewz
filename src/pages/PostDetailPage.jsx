@@ -7,6 +7,7 @@ import { usePost } from '../hooks/usePost'
 import { likePost, unlikePost, deletePost } from '../lib/supabase'
 import useAuthStore from '../store/authStore'
 import CommentSection from '../components/Post/CommentSection'
+import ShareCardModal from '../components/Post/ShareCardModal'
 import Avatar from '../components/UI/Avatar'
 import StarRating from '../components/UI/StarRating'
 import Spinner from '../components/UI/Spinner'
@@ -26,8 +27,9 @@ export default function PostDetailPage() {
   const qc                = useQueryClient()
   const { data: post, isLoading } = usePost(id)
 
-  const [liked, setLiked] = useState(false)
+  const [liked, setLiked]       = useState(false)
   const [heartAnim, setHeartAnim] = useState(false)
+  const [showShare, setShowShare] = useState(false)
 
   const handleLike = async () => {
     if (!user || !post) return
@@ -42,10 +44,7 @@ export default function PostDetailPage() {
     }
   }
 
-  const handleShare = () => {
-    navigator.clipboard?.writeText(window.location.href)
-      .then(() => alert('Link copied!'))
-  }
+  const handleShare = () => setShowShare(true)
 
   const deleteMut = useMutation({
     mutationFn: () => deletePost(post.id),
@@ -187,6 +186,14 @@ export default function PostDetailPage() {
 
       {/* Comments */}
       <CommentSection postId={id} />
+
+      {showShare && (
+        <ShareCardModal
+          post={post}
+          profile={p}
+          onClose={() => setShowShare(false)}
+        />
+      )}
     </div>
   )
 }
