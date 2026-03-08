@@ -6,6 +6,8 @@ import CreatePostPage from './pages/CreatePostPage'
 import PostDetailPage from './pages/PostDetailPage'
 import ProfilePage from './pages/ProfilePage'
 import SearchPage from './pages/SearchPage'
+import NewReleasesPage from './pages/NewReleasesPage'
+import SpotifyCallbackPage from './pages/SpotifyCallbackPage'
 import useAuthStore from './store/authStore'
 import { fetchProfile } from './lib/supabase'
 
@@ -28,12 +30,14 @@ function App() {
   return (
     <Layout>
       <Routes>
-        <Route path="/"              element={<HomePage />} />
-        <Route path="/create"        element={<CreatePostPage />} />
-        <Route path="/post/:id"      element={<PostDetailPage />} />
+        <Route path="/"                  element={<HomePage />} />
+        <Route path="/create"            element={<CreatePostPage />} />
+        <Route path="/post/:id"          element={<PostDetailPage />} />
         <Route path="/profile/:username" element={<ProfilePage />} />
-        <Route path="/search"        element={<SearchPage />} />
-        <Route path="*"              element={<Navigate to="/" replace />} />
+        <Route path="/search"            element={<SearchPage />} />
+        <Route path="/nuove-uscite"      element={<NewReleasesPage />} />
+        <Route path="/spotify-callback"  element={<SpotifyCallbackPage />} />
+        <Route path="*"                  element={<Navigate to="/" replace />} />
       </Routes>
     </Layout>
   )
