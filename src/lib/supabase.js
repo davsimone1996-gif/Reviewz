@@ -28,6 +28,16 @@ export const getSession = () => supabase.auth.getSession()
 
 // ─── Profile helpers ─────────────────────────────────────────────
 
+export const searchProfiles = async (query) => {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('id, username, avatar_url, social_score')
+    .ilike('username', `%${query}%`)
+    .limit(8)
+  if (error) throw error
+  return data
+}
+
 export const fetchProfile = async (userId) => {
   const { data, error } = await supabase
     .from('profile_stats')

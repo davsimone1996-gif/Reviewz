@@ -51,7 +51,7 @@ export default function Navbar() {
               <input
                 value={searchQ}
                 onChange={(e) => setSearchQ(e.target.value)}
-                placeholder="Search music…"
+                placeholder="Search music or users…"
                 className="input pl-9 py-1.5 text-sm h-9"
               />
             </div>
@@ -117,7 +117,7 @@ export default function Navbar() {
                 <input
                   value={searchQ}
                   onChange={(e) => setSearchQ(e.target.value)}
-                  placeholder="Search tracks or albums…"
+                  placeholder="Search music or users…"
                   className="input pl-9 py-2 text-sm"
                   autoFocus
                 />

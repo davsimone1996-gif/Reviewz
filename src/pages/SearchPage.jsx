@@ -1,11 +1,14 @@
 import { useState } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { Music, Disc3, ExternalLink, Search as SearchIcon, Play, PenLine } from 'lucide-react'
+import { Music, Disc3, Search as SearchIcon, Play, PenLine, Users } from 'lucide-react'
 import { searchSpotify } from '../lib/spotify'
+import { searchProfiles } from '../lib/supabase'
 import Spinner from '../components/UI/Spinner'
+import Avatar from '../components/UI/Avatar'
+import ScoreBadge from '../components/UI/ScoreBadge'
 
-function ResultCard({ item }) {
+function MusicCard({ item }) {
   const navigate = useNavigate()
 
   return (
@@ -50,14 +53,37 @@ function ResultCard({ item }) {
   )
 }
 
+function ProfileCard({ profile }) {
+  const navigate = useNavigate()
+
+  return (
+    <div
+      onClick={() => navigate(`/profile/${profile.username}`)}
+      className="card-hover p-4 flex items-center gap-4 animate-fade-in-up cursor-pointer group"
+    >
+      <Avatar src={profile.avatar_url} username={profile.username} size="lg" />
+      <div className="flex-1 min-w-0">
+        <p className="font-semibold group-hover:text-accent transition-colors">@{profile.username}</p>
+        <ScoreBadge score={profile.social_score} />
+      </div>
+    </div>
+  )
+}
+
 export default function SearchPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const q     = searchParams.get('q') || ''
   const [input, setInput] = useState(q)
 
-  const { data, isLoading, isFetching } = useQuery({
+  const { data: musicData, isLoading: musicLoading, isFetching: musicFetching } = useQuery({
     queryKey: ['spotify-search', q],
     queryFn: () => searchSpotify(q, 'both', 12),
+    enabled: q.length > 1,
+  })
+
+  const { data: profilesData, isLoading: profilesLoading } = useQuery({
+    queryKey: ['profiles-search', q],
+    queryFn: () => searchProfiles(q),
     enabled: q.length > 1,
   })
 
@@ -66,16 +92,17 @@ export default function SearchPage() {
     if (input.trim()) setSearchParams({ q: input.trim() })
   }
 
-  const tracks = data?.tracks ?? []
-  const albums = data?.albums ?? []
-  const total  = tracks.length + albums.length
-  const loading = isLoading || isFetching
+  const tracks   = musicData?.tracks ?? []
+  const albums   = musicData?.albums ?? []
+  const profiles = profilesData ?? []
+  const loading  = musicLoading || musicFetching || profilesLoading
+  const total    = tracks.length + albums.length + profiles.length
 
   return (
     <div className="max-w-2xl mx-auto space-y-6 animate-fade-in">
       <div>
-        <h1 className="text-2xl font-bold mb-1">Search Music</h1>
-        <p className="text-muted text-sm">Find tracks and albums to review</p>
+        <h1 className="text-2xl font-bold mb-1">Search</h1>
+        <p className="text-muted text-sm">Find music to review or discover users</p>
       </div>
 
       {/* Search bar */}
@@ -85,7 +112,7 @@ export default function SearchPage() {
           <input
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Artist, track, or album…"
+            placeholder="Artist, track, album or username…"
             className="input pl-11 py-3 text-base"
             autoFocus
           />
@@ -109,7 +136,7 @@ export default function SearchPage() {
         <div className="card p-10 text-center">
           <p className="text-4xl mb-3">🎵</p>
           <p className="font-semibold">Search for anything</p>
-          <p className="text-muted text-sm mt-1">Tracks, albums, artists — all from Spotify</p>
+          <p className="text-muted text-sm mt-1">Tracks, albums, artists — or find users by username</p>
         </div>
       )}
 
@@ -117,13 +144,24 @@ export default function SearchPage() {
         <div className="space-y-6">
           <p className="text-sm text-muted">{total} results for "{q}"</p>
 
+          {profiles.length > 0 && (
+            <div className="space-y-2">
+              <h2 className="text-sm font-bold text-muted uppercase tracking-wider flex items-center gap-2">
+                <Users size={13} /> Users
+              </h2>
+              {profiles.map((p) => (
+                <ProfileCard key={p.id} profile={p} />
+              ))}
+            </div>
+          )}
+
           {tracks.length > 0 && (
             <div className="space-y-2">
               <h2 className="text-sm font-bold text-muted uppercase tracking-wider flex items-center gap-2">
                 <Music size={13} /> Tracks
               </h2>
               {tracks.map((item) => (
-                <ResultCard key={item.spotify_id} item={item} />
+                <MusicCard key={item.spotify_id} item={item} />
               ))}
             </div>
           )}
@@ -134,7 +172,7 @@ export default function SearchPage() {
                 <Disc3 size={13} /> Albums
               </h2>
               {albums.map((item) => (
-                <ResultCard key={item.spotify_id} item={item} />
+                <MusicCard key={item.spotify_id} item={item} />
               ))}
             </div>
           )}
