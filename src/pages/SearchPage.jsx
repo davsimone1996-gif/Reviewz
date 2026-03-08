@@ -81,10 +81,11 @@ export default function SearchPage() {
     enabled: q.length > 1,
   })
 
-  const { data: profilesData, isLoading: profilesLoading } = useQuery({
+  const { data: profilesData, isLoading: profilesLoading, error: profilesError } = useQuery({
     queryKey: ['profiles-search', q],
     queryFn: () => searchProfiles(q),
     enabled: q.length > 1,
+    retry: false,
   })
 
   const handleSubmit = (e) => {
@@ -119,6 +120,12 @@ export default function SearchPage() {
         </div>
         <button type="submit" className="btn-primary px-6">Search</button>
       </form>
+
+      {profilesError && (
+        <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-3 text-red-400 text-sm">
+          User search error: {profilesError.message}
+        </div>
+      )}
 
       {loading && (
         <div className="flex justify-center py-12"><Spinner className="w-7 h-7" /></div>
