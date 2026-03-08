@@ -1,6 +1,7 @@
 import { useState } from 'react'
-import { Mail, Lock, Loader2, Eye, EyeOff } from 'lucide-react'
+import { Mail, Lock, Loader2, Eye, EyeOff, MailCheck } from 'lucide-react'
 import useAuthStore from '../../store/authStore'
+import { resendConfirmation } from '../../lib/supabase'
 
 export default function LoginForm({ onSuccess, onSwitch }) {
   const [email, setEmail]       = useState('')
@@ -8,11 +9,20 @@ export default function LoginForm({ onSuccess, onSwitch }) {
   const [showPw, setShowPw]     = useState(false)
   const [err, setErr]           = useState(null)
   const [loading, setLoading]   = useState(false)
+  const [resent, setResent]     = useState(false)
+  const [resending, setResending] = useState(false)
   const login = useAuthStore((s) => s.login)
+
+  const isConfirmationError = !!err && (
+    err.toLowerCase().includes('confirm') ||
+    err.toLowerCase().includes('email') ||
+    err.toLowerCase().includes('verif')
+  )
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     setErr(null)
+    setResent(false)
     setLoading(true)
     try {
       await login(email, password)
@@ -22,6 +32,14 @@ export default function LoginForm({ onSuccess, onSwitch }) {
     } finally {
       setLoading(false)
     }
+  }
+
+  const handleResend = async () => {
+    if (!email) { setErr('Enter your email address first'); return }
+    setResending(true)
+    await resendConfirmation(email)
+    setResent(true)
+    setResending(false)
   }
 
   return (
@@ -49,8 +67,26 @@ export default function LoginForm({ onSuccess, onSwitch }) {
       </div>
 
       {err && (
-        <div className="bg-red-500/10 border border-red-500/30 rounded-xl px-3 py-2 text-red-400 text-sm">
-          {err}
+        <div className="bg-red-500/10 border border-red-500/30 rounded-xl px-3 py-2 text-red-400 text-sm space-y-1.5">
+          <p>{err}</p>
+          {isConfirmationError && !resent && (
+            <button
+              type="button"
+              onClick={handleResend}
+              disabled={resending}
+              className="flex items-center gap-1.5 text-accent hover:underline text-xs font-semibold disabled:opacity-50"
+            >
+              {resending ? <Loader2 size={12} className="animate-spin" /> : <MailCheck size={12} />}
+              Resend confirmation email
+            </button>
+          )}
+        </div>
+      )}
+
+      {resent && (
+        <div className="bg-green-500/10 border border-green-500/30 rounded-xl px-3 py-2 text-green-400 text-sm flex items-center gap-2">
+          <MailCheck size={14} />
+          Confirmation email sent — check your inbox.
         </div>
       )}
 

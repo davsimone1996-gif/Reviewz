@@ -69,13 +69,13 @@ export default function Navbar() {
 
           {user ? (
             <div className="flex items-center gap-2">
-              {/* Create review button */}
+              {/* Create review button — hidden on mobile (in bottom nav) */}
               <Link
                 to="/create"
-                className="btn-primary flex items-center gap-1.5 py-1.5 px-3 text-sm"
+                className="hidden sm:flex btn-primary items-center gap-1.5 py-1.5 px-3 text-sm"
               >
                 <PlusCircle size={15} />
-                <span className="hidden sm:block">Review</span>
+                <span>Review</span>
               </Link>
 
               {/* User menu */}
@@ -90,10 +90,11 @@ export default function Navbar() {
                 </div>
               </Link>
 
+              {/* Logout — hidden on mobile */}
               <button
                 onClick={logout}
                 title="Sign out"
-                className="btn-ghost p-2 text-muted hover:text-red-400"
+                className="hidden sm:block btn-ghost p-2 text-muted hover:text-red-400"
               >
                 <LogOut size={15} />
               </button>

@@ -26,6 +26,9 @@ export const signOut = () => supabase.auth.signOut()
 
 export const getSession = () => supabase.auth.getSession()
 
+export const resendConfirmation = (email) =>
+  supabase.auth.resend({ type: 'signup', email })
+
 // ─── Profile helpers ─────────────────────────────────────────────
 
 export const searchProfiles = async (query) => {
@@ -219,6 +222,6 @@ export const checkIsFollowing = async (followerId, followingId) => {
     .select('id')
     .eq('follower_id', followerId)
     .eq('following_id', followingId)
-    .single()
+    .maybeSingle()
   return !!data
 }
