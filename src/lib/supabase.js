@@ -224,6 +224,30 @@ export const updateNowPlaying = async (userId, nowPlaying) => {
   if (error) throw error
 }
 
+// ─── Avatar upload ────────────────────────────────────────────────
+
+export const uploadAvatar = async (userId, file) => {
+  const ext = file.name.split('.').pop()
+  const path = `${userId}/avatar.${ext}`
+
+  const { error: uploadError } = await supabase.storage
+    .from('avatars')
+    .upload(path, file, { upsert: true })
+  if (uploadError) throw uploadError
+
+  const { data } = supabase.storage.from('avatars').getPublicUrl(path)
+  const avatarUrl = `${data.publicUrl}?t=${Date.now()}`
+
+  const { data: profile, error } = await supabase
+    .from('profiles')
+    .update({ avatar_url: avatarUrl, updated_at: new Date().toISOString() })
+    .eq('id', userId)
+    .select()
+    .single()
+  if (error) throw error
+  return profile
+}
+
 // ─── Follow helpers ───────────────────────────────────────────────
 
 export const followUser = async (followerId, followingId) => {

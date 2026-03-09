@@ -350,3 +350,30 @@ create index follows_follower_id_idx        on public.follows(follower_id);
 create index follows_following_id_idx       on public.follows(following_id);
 create index notifications_user_id_idx      on public.notifications(user_id);
 create index notifications_created_at_idx   on public.notifications(created_at desc);
+
+-- ────────────────────────────────────────────────────────────
+-- STORAGE: avatars bucket
+-- Run this in the Supabase SQL Editor after creating the
+-- bucket named "avatars" (public) in the Storage dashboard
+-- ────────────────────────────────────────────────────────────
+insert into storage.buckets (id, name, public)
+  values ('avatars', 'avatars', true)
+  on conflict (id) do nothing;
+
+-- Allow authenticated users to upload their own avatar
+create policy "Users can upload their own avatar"
+  on storage.objects for insert
+  to authenticated
+  with check (bucket_id = 'avatars' and (storage.foldername(name))[1] = auth.uid()::text);
+
+-- Allow authenticated users to overwrite their own avatar
+create policy "Users can update their own avatar"
+  on storage.objects for update
+  to authenticated
+  using (bucket_id = 'avatars' and (storage.foldername(name))[1] = auth.uid()::text);
+
+-- Allow anyone to view avatars (public bucket)
+create policy "Avatars are publicly readable"
+  on storage.objects for select
+  to public
+  using (bucket_id = 'avatars');

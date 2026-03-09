@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { Edit2, Check, X, UserCheck, UserPlus, Music2, Headphones, LogOut } from 'lucide-react'
-import { followUser, unfollowUser, updateProfile, updateNowPlaying } from '../../lib/supabase'
+import { Edit2, Check, X, UserCheck, UserPlus, Music2, Headphones, LogOut, Camera } from 'lucide-react'
+import { followUser, unfollowUser, updateProfile, updateNowPlaying, uploadAvatar } from '../../lib/supabase'
 import { startSpotifyAuth, isSpotifyConnected, getCurrentlyPlaying, clearSpotifyTokens } from '../../lib/spotifyAuth'
 import useAuthStore from '../../store/authStore'
 import Avatar from '../UI/Avatar'
@@ -50,6 +50,7 @@ export default function ProfileHeader({ profile, isFollowing, isOwn, postCount =
   const [editing, setEditing]         = useState(false)
   const [bio, setBio]                 = useState(profile.bio ?? '')
   const [spotifyConnected, setSpotifyConnected] = useState(false)
+  const avatarInputRef = useRef(null)
 
   // Check Spotify connection status on mount (only for own profile)
   useEffect(() => {
@@ -110,6 +111,21 @@ export default function ProfileHeader({ profile, isFollowing, isOwn, postCount =
     },
   })
 
+  const avatarMut = useMutation({
+    mutationFn: (file) => uploadAvatar(user.id, file),
+    onSuccess: (updated) => {
+      setStoreProfile({ ...profile, ...updated })
+      qc.invalidateQueries({ queryKey: ['profile', profile.username] })
+    },
+  })
+
+  const handleAvatarChange = (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    avatarMut.mutate(file)
+    e.target.value = ''
+  }
+
   const handleDisconnectSpotify = () => {
     clearSpotifyTokens()
     setSpotifyConnected(false)
@@ -133,7 +149,30 @@ export default function ProfileHeader({ profile, isFollowing, isOwn, postCount =
         {/* Avatar + actions row */}
         <div className="flex items-end justify-between -mt-10 mb-4">
           <div className="ring-4 ring-surface-100 rounded-full relative z-10">
-            <Avatar src={profile.avatar_url} username={profile.username} size="xl" />
+            {isOwn ? (
+              <button
+                onClick={() => avatarInputRef.current?.click()}
+                disabled={avatarMut.isPending}
+                className="relative group rounded-full focus:outline-none"
+                title="Cambia foto profilo"
+              >
+                <Avatar src={profile.avatar_url} username={profile.username} size="xl" />
+                <span className="absolute inset-0 flex items-center justify-center rounded-full bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity">
+                  {avatarMut.isPending
+                    ? <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    : <Camera size={20} className="text-white" />}
+                </span>
+              </button>
+            ) : (
+              <Avatar src={profile.avatar_url} username={profile.username} size="xl" />
+            )}
+            <input
+              ref={avatarInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleAvatarChange}
+            />
           </div>
 
           <div className="flex gap-2 mt-2">
