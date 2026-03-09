@@ -1,4 +1,4 @@
-import { Home, Search, PlusCircle, User } from 'lucide-react'
+import { Home, Search, PlusCircle, User, Disc3 } from 'lucide-react'
 import { Link, useLocation } from 'react-router-dom'
 import useAuthStore from '../../store/authStore'
 
@@ -21,6 +21,11 @@ export default function BottomNav() {
         <Link to="/search" className={`flex flex-col items-center gap-0.5 flex-1 py-2 transition-colors ${isActive('/search') ? 'text-accent' : 'text-muted'}`}>
           <Search size={21} strokeWidth={isActive('/search') ? 2.5 : 2} />
           <span className="text-[10px] font-medium">Search</span>
+        </Link>
+
+        <Link to="/nuove-uscite" className={`flex flex-col items-center gap-0.5 flex-1 py-2 transition-colors ${isActive('/nuove-uscite') ? 'text-accent' : 'text-muted'}`}>
+          <Disc3 size={21} strokeWidth={isActive('/nuove-uscite') ? 2.5 : 2} />
+          <span className="text-[10px] font-medium">Uscite</span>
         </Link>
 
         {user && (
