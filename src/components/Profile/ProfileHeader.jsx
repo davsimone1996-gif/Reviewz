@@ -122,18 +122,17 @@ export default function ProfileHeader({ profile, isFollowing, isOwn, postCount =
     : null
 
   return (
-    <div className="card overflow-hidden animate-fade-in-up">
+    <div className="card animate-fade-in-up overflow-visible">
       {/* Cover banner */}
-      <div className="h-28 sm:h-36 bg-gradient-to-br from-accent/30 via-surface-200 to-surface-100 relative overflow-hidden">
+      <div className="h-28 sm:h-36 bg-gradient-to-br from-accent/30 via-surface-200 to-surface-100 relative overflow-hidden rounded-t-2xl">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-orange-500/20 via-transparent to-transparent" />
         <div className="absolute -right-10 -top-10 w-40 h-40 rounded-full bg-accent/10 blur-3xl" />
-        <Music2 size={80} className="absolute right-8 top-4 text-white/5" />
       </div>
 
       <div className="px-5 pb-5">
         {/* Avatar + actions row */}
         <div className="flex items-end justify-between -mt-10 mb-4">
-          <div className="ring-4 ring-surface-100 rounded-full">
+          <div className="ring-4 ring-surface-100 rounded-full relative z-10">
             <Avatar src={profile.avatar_url} username={profile.username} size="xl" />
           </div>
 
