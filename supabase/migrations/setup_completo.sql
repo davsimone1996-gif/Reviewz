@@ -248,7 +248,8 @@ alter table public.profiles add column if not exists now_playing_url       text;
 alter table public.profiles add column if not exists now_playing_updated_at timestamptz;
 
 -- ── VIEW: profile_stats ───────────────────────────────────────
-create or replace view public.profile_stats as
+drop view if exists public.profile_stats;
+create view public.profile_stats as
 select
   p.id, p.username, p.bio, p.avatar_url, p.social_score, p.created_at,
   p.now_playing_title, p.now_playing_artist, p.now_playing_cover_url,
