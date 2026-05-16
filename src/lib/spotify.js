@@ -121,3 +121,39 @@ export async function getNewReleases(market = 'IT', limit = 20) {
   const data = await spotifyFetch(`/browse/new-releases?market=${market}&limit=${limit}`)
   return (data.albums?.items ?? []).map(normaliseAlbum)
 }
+
+/**
+ * Search Spotify for artists
+ */
+export async function searchArtists(query, limit = 8) {
+  if (!query.trim()) return []
+  const data = await spotifyFetch(
+    `/search?q=${encodeURIComponent(query)}&type=artist&limit=${limit}&market=IT`
+  )
+  return (data.artists?.items ?? []).map((a) => ({
+    spotify_artist_id: a.id,
+    artist_name:       a.name,
+    artist_image_url:  a.images?.[0]?.url ?? null,
+    genres:            a.genres?.slice(0, 3) ?? [],
+    followers:         a.followers?.total ?? 0,
+  }))
+}
+
+/**
+ * Fetch the most recent album/single for a given Spotify artist ID
+ */
+export async function getArtistLatestRelease(artistId) {
+  const data = await spotifyFetch(
+    `/artists/${artistId}/albums?album_type=album,single&market=IT&limit=1`
+  )
+  const item = data.items?.[0]
+  if (!item) return null
+  return {
+    id:           item.id,
+    title:        item.name,
+    cover_url:    item.images?.[0]?.url ?? null,
+    spotify_url:  item.external_urls?.spotify ?? null,
+    release_date: item.release_date,
+    album_type:   item.album_type,
+  }
+}

@@ -11,8 +11,10 @@ export default function SpotifyCallbackPage() {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
-    const code  = params.get('code')
-    const errorParam = params.get('error')
+    const code        = params.get('code')
+    const errorParam  = params.get('error')
+    const returnState = params.get('state')
+    const storedState = sessionStorage.getItem('spotify_oauth_state')
 
     if (errorParam) {
       setError('Accesso Spotify negato.')
@@ -23,6 +25,13 @@ export default function SpotifyCallbackPage() {
       setError('Codice di autorizzazione mancante.')
       return
     }
+
+    // CSRF check
+    if (!storedState || returnState !== storedState) {
+      setError('Risposta non valida da Spotify. Riprova.')
+      return
+    }
+    sessionStorage.removeItem('spotify_oauth_state')
 
     exchangeCodeForTokens(code)
       .then(() => {

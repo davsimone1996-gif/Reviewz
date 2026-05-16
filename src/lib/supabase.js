@@ -88,7 +88,6 @@ export const createPost = async (post) => {
 }
 
 export const fetchFeedPosts = async (userId, page = 0, limit = 20) => {
-  // Posts from users the current user follows + own posts
   const { data: follows } = await supabase
     .from('follows')
     .select('following_id')
@@ -105,7 +104,27 @@ export const fetchFeedPosts = async (userId, page = 0, limit = 20) => {
     .range(page * limit, (page + 1) * limit - 1)
 
   if (error) throw error
-  return data
+  return data ?? []
+}
+
+// Last 24h posts ordered by popularity, excluding given user IDs
+export const fetchTrendingPosts = async (excludeUserIds = [], limit = 10) => {
+  const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+
+  let query = supabase
+    .from('posts')
+    .select('*, profiles(id, username, avatar_url, social_score)')
+    .gte('created_at', since)
+    .order('likes_count', { ascending: false })
+    .limit(limit)
+
+  if (excludeUserIds.length > 0) {
+    query = query.not('user_id', 'in', `(${excludeUserIds.join(',')})`)
+  }
+
+  const { data, error } = await query
+  if (error) throw error
+  return data ?? []
 }
 
 export const fetchPublicFeed = async (page = 0, limit = 20) => {
@@ -115,7 +134,7 @@ export const fetchPublicFeed = async (page = 0, limit = 20) => {
     .order('created_at', { ascending: false })
     .range(page * limit, (page + 1) * limit - 1)
   if (error) throw error
-  return data
+  return data ?? []
 }
 
 export const fetchUserPosts = async (userId, page = 0, limit = 20) => {
@@ -267,12 +286,13 @@ export const unfollowUser = async (followerId, followingId) => {
 }
 
 export const checkIsFollowing = async (followerId, followingId) => {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('follows')
     .select('id')
     .eq('follower_id', followerId)
     .eq('following_id', followingId)
     .maybeSingle()
+  if (error) throw error
   return !!data
 }
 
@@ -306,4 +326,49 @@ export const getUnreadNotificationsCount = async (userId) => {
     .eq('read', false)
   if (error) throw error
   return count ?? 0
+}
+
+// ─── Followed Artists ─────────────────────────────────────────────
+
+export const getFollowedArtists = async (userId) => {
+  const { data, error } = await supabase
+    .from('followed_artists')
+    .select('*')
+    .eq('user_id', userId)
+    .order('artist_name')
+  if (error) throw error
+  return data ?? []
+}
+
+export const isFollowingArtist = async (userId, spotifyArtistId) => {
+  const { data } = await supabase
+    .from('followed_artists')
+    .select('id')
+    .eq('user_id', userId)
+    .eq('spotify_artist_id', spotifyArtistId)
+    .maybeSingle()
+  return !!data
+}
+
+export const followArtist = async (userId, artist, latestRelease) => {
+  const { error } = await supabase
+    .from('followed_artists')
+    .upsert({
+      user_id:            userId,
+      spotify_artist_id:  artist.spotify_artist_id,
+      artist_name:        artist.artist_name,
+      artist_image_url:   artist.artist_image_url ?? null,
+      last_release_id:    latestRelease?.id ?? null,
+      last_release_title: latestRelease?.title ?? null,
+    }, { onConflict: 'user_id,spotify_artist_id' })
+  if (error) throw error
+}
+
+export const unfollowArtist = async (userId, spotifyArtistId) => {
+  const { error } = await supabase
+    .from('followed_artists')
+    .delete()
+    .eq('user_id', userId)
+    .eq('spotify_artist_id', spotifyArtistId)
+  if (error) throw error
 }

@@ -99,6 +99,8 @@ export default function ProfileHeader({ profile, isFollowing, isOwn, postCount =
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['profile', profile.username] })
       qc.invalidateQueries({ queryKey: ['following', user?.id, profile.id] })
+      qc.invalidateQueries({ queryKey: ['feed', user?.id] })
+      qc.invalidateQueries({ queryKey: ['trending', user?.id] })
     },
   })
 

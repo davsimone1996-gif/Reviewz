@@ -67,6 +67,10 @@ export async function startSpotifyAuth() {
   const challenge = await generateCodeChallenge(verifier)
   sessionStorage.setItem('spotify_pkce_verifier', verifier)
 
+  // CSRF protection: random state param validated in the callback
+  const state = base64urlEncode(crypto.getRandomValues(new Uint8Array(16)))
+  sessionStorage.setItem('spotify_oauth_state', state)
+
   const redirectUri = `${window.location.origin}/spotify-callback`
   const params = new URLSearchParams({
     client_id:             clientId,
@@ -75,6 +79,7 @@ export async function startSpotifyAuth() {
     code_challenge_method: 'S256',
     code_challenge:        challenge,
     scope:                 SCOPES,
+    state,
   })
 
   window.location.href = `${SPOTIFY_AUTH_BASE}/authorize?${params}`

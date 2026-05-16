@@ -6,6 +6,8 @@
   body {
     @apply bg-surface text-gray-100 antialiased;
     margin: 0;
+    /* Prevent iOS input zoom (font-size ≥ 16px on inputs) */
+    -webkit-text-size-adjust: 100%;
   }
 
   * {
@@ -70,6 +72,11 @@
   /* ── Like button animation ───────────────────────────── */
   .like-btn {
     @apply transition-all duration-150 active:scale-125;
+  }
+
+  /* ── iOS safe-area bottom padding utility ────────────── */
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom);
   }
 }
 

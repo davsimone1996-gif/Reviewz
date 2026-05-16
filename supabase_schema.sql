@@ -13,9 +13,10 @@ create extension if not exists "uuid-ossp";
 create table public.profiles (
   id            uuid primary key references auth.users(id) on delete cascade,
   username      text unique not null,
-  bio           text,
-  avatar_url    text,
-  social_score  integer not null default 0,
+  bio              text,
+  avatar_url       text,
+  preferred_genres text[] not null default '{}',
+  social_score     integer not null default 0,
   created_at    timestamptz not null default now(),
   updated_at    timestamptz not null default now()
 );
@@ -254,6 +255,10 @@ left join (select follower_id,  count(*) as cnt from public.follows group by fol
 -- MIGRATION: Now Playing columns on profiles
 -- Run this if the DB already exists (skip on fresh install)
 -- ────────────────────────────────────────────────────────────
+-- ── Migration: run on existing databases ───────────────────────────
+alter table public.profiles
+  add column if not exists preferred_genres text[] not null default '{}';
+
 alter table public.profiles
   add column if not exists now_playing_title     text,
   add column if not exists now_playing_artist    text,

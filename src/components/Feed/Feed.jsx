@@ -1,11 +1,11 @@
-import { useInfiniteQuery } from '@tanstack/react-query'
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
 import { useInView } from 'react-intersection-observer'
 import { useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { Music2, PlusCircle } from 'lucide-react'
+import { Music2, PlusCircle, Flame } from 'lucide-react'
 import PostCard from '../Post/PostCard'
 import Spinner from '../UI/Spinner'
-import { fetchFeedPosts, fetchPublicFeed } from '../../lib/supabase'
+import { fetchFeedPosts, fetchPublicFeed, fetchTrendingPosts } from '../../lib/supabase'
 import useAuthStore from '../../store/authStore'
 
 export default function Feed() {
@@ -27,11 +27,22 @@ export default function Feed() {
     initialPageParam: 0,
   })
 
+  const followedPosts = data?.pages.flat() ?? []
+  const followedIds   = new Set(followedPosts.map((p) => p.id))
+
+  const { data: trending, isLoading: trendingLoading } = useQuery({
+    queryKey: ['trending', user?.id],
+    queryFn: () => fetchTrendingPosts(user ? [user.id] : [], 10),
+    enabled: !isLoading,
+    staleTime: 5 * 60 * 1000,
+  })
+
+  // Deduplicate: don't show trending posts already in the followed feed
+  const trendingPosts = (trending ?? []).filter((p) => !followedIds.has(p.id))
+
   useEffect(() => {
     if (inView && hasNextPage && !isFetchingNextPage) fetchNextPage()
   }, [inView, hasNextPage, isFetchingNextPage, fetchNextPage])
-
-  const posts = data?.pages.flat() ?? []
 
   if (isLoading) return (
     <div className="flex flex-col items-center justify-center py-20 gap-3">
@@ -40,7 +51,9 @@ export default function Feed() {
     </div>
   )
 
-  if (posts.length === 0) return (
+  const isEmpty = followedPosts.length === 0 && trendingPosts.length === 0
+
+  if (isEmpty && !trendingLoading) return (
     <div className="card p-12 flex flex-col items-center gap-4 text-center">
       <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-accent/20 to-surface-200 flex items-center justify-center">
         <Music2 size={28} className="text-accent" />
@@ -63,7 +76,8 @@ export default function Feed() {
 
   return (
     <div className="space-y-3">
-      {posts.map((post, i) => (
+      {/* ── Followed feed (paginated) ───────────────────── */}
+      {followedPosts.map((post, i) => (
         <div key={post.id} style={{ animationDelay: `${Math.min(i, 5) * 0.06}s` }}>
           <PostCard post={post} />
         </div>
@@ -77,7 +91,25 @@ export default function Feed() {
         </div>
       )}
 
-      {!hasNextPage && posts.length > 5 && (
+      {/* ── Hot Today section ───────────────────────────── */}
+      {!isLoading && !isFetchingNextPage && trendingPosts.length > 0 && (
+        <div className="pt-4">
+          <div className="flex items-center gap-2 mb-3">
+            <Flame size={16} className="text-orange-400" />
+            <h2 className="text-sm font-bold text-muted uppercase tracking-wider">Hot Today</h2>
+            <span className="text-xs text-muted">· last 24h</span>
+          </div>
+          <div className="space-y-3">
+            {trendingPosts.map((post, i) => (
+              <div key={post.id} style={{ animationDelay: `${i * 0.05}s` }}>
+                <PostCard post={post} />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {!hasNextPage && followedPosts.length > 5 && trendingPosts.length === 0 && (
         <p className="text-center text-xs text-muted py-4">You've seen it all ✓</p>
       )}
     </div>
