@@ -11,7 +11,7 @@ export default function AuthModal({ onClose }) {
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md p-4"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
-      <div className="relative w-full max-w-sm card animate-scale-in">
+      <div className="relative w-full max-w-sm card animate-scale-in max-h-[90vh] overflow-y-auto">
         {/* Close */}
         <button
           onClick={onClose}
