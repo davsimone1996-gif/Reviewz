@@ -12,20 +12,19 @@ import useAuthStore from './store/authStore'
 import { fetchProfile } from './lib/supabase'
 
 function App() {
-  const { initialize, user, setProfile } = useAuthStore()
+  const { initialize, user, loading, setProfile } = useAuthStore()
 
   useEffect(() => {
     initialize()
   }, [initialize])
 
-  // Fetch profile whenever user changes
+  // Fetch profile only after session initialization is complete
   useEffect(() => {
-    if (user) {
-      fetchProfile(user.id)
-        .then(setProfile)
-        .catch(() => {})
-    }
-  }, [user, setProfile])
+    if (loading || !user) return
+    fetchProfile(user.id)
+      .then(setProfile)
+      .catch(() => {})
+  }, [user, loading, setProfile])
 
   return (
     <Layout>

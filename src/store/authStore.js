@@ -2,6 +2,9 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { supabase, signIn, signUp, signOut } from '../lib/supabase'
 
+// Module-level subscription reference to prevent duplicates and enable cleanup
+let _authSubscription = null
+
 const useAuthStore = create(
   persist(
     (set, get) => ({
@@ -41,8 +44,12 @@ const useAuthStore = create(
       },
 
       logout: async () => {
+        if (_authSubscription) {
+          _authSubscription.unsubscribe()
+          _authSubscription = null
+        }
         await signOut()
-        set({ user: null, profile: null })
+        set({ user: null, profile: null, loading: false })
       },
 
       initialize: async () => {
@@ -50,9 +57,15 @@ const useAuthStore = create(
         const { data: { session } } = await supabase.auth.getSession()
         set({ user: session?.user ?? null, loading: false })
 
-        supabase.auth.onAuthStateChange((_event, session) => {
+        // Unsubscribe from any existing listener before creating a new one
+        if (_authSubscription) {
+          _authSubscription.unsubscribe()
+        }
+
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
           set({ user: session?.user ?? null })
         })
+        _authSubscription = subscription
       },
     }),
     {

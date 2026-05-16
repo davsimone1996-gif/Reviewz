@@ -88,7 +88,6 @@ export const createPost = async (post) => {
 }
 
 export const fetchFeedPosts = async (userId, page = 0, limit = 20) => {
-  // Posts from users the current user follows + own posts
   const { data: follows } = await supabase
     .from('follows')
     .select('following_id')
@@ -105,7 +104,27 @@ export const fetchFeedPosts = async (userId, page = 0, limit = 20) => {
     .range(page * limit, (page + 1) * limit - 1)
 
   if (error) throw error
-  return data
+  return data ?? []
+}
+
+// Last 24h posts ordered by popularity, excluding given user IDs
+export const fetchTrendingPosts = async (excludeUserIds = [], limit = 10) => {
+  const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+
+  let query = supabase
+    .from('posts')
+    .select('*, profiles(id, username, avatar_url, social_score)')
+    .gte('created_at', since)
+    .order('likes_count', { ascending: false })
+    .limit(limit)
+
+  if (excludeUserIds.length > 0) {
+    query = query.not('user_id', 'in', `(${excludeUserIds.join(',')})`)
+  }
+
+  const { data, error } = await query
+  if (error) throw error
+  return data ?? []
 }
 
 export const fetchPublicFeed = async (page = 0, limit = 20) => {
@@ -115,7 +134,7 @@ export const fetchPublicFeed = async (page = 0, limit = 20) => {
     .order('created_at', { ascending: false })
     .range(page * limit, (page + 1) * limit - 1)
   if (error) throw error
-  return data
+  return data ?? []
 }
 
 export const fetchUserPosts = async (userId, page = 0, limit = 20) => {
@@ -267,12 +286,13 @@ export const unfollowUser = async (followerId, followingId) => {
 }
 
 export const checkIsFollowing = async (followerId, followingId) => {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('follows')
     .select('id')
     .eq('follower_id', followerId)
     .eq('following_id', followingId)
     .maybeSingle()
+  if (error) throw error
   return !!data
 }
 
