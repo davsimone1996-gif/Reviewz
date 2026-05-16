@@ -22,3 +22,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Capacitor Android (generated — rebuild with: npm run android:sync)
+android/
