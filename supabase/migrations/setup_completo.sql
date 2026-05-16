@@ -239,6 +239,14 @@ create trigger on_follow_change
   after insert or delete on public.follows
   for each row execute function public.update_social_score_on_follow();
 
+-- ── Aggiungi colonne mancanti a profiles (idempotente) ───────
+alter table public.profiles add column if not exists preferred_genres     text[] not null default '{}';
+alter table public.profiles add column if not exists now_playing_title     text;
+alter table public.profiles add column if not exists now_playing_artist    text;
+alter table public.profiles add column if not exists now_playing_cover_url text;
+alter table public.profiles add column if not exists now_playing_url       text;
+alter table public.profiles add column if not exists now_playing_updated_at timestamptz;
+
 -- ── VIEW: profile_stats ───────────────────────────────────────
 create or replace view public.profile_stats as
 select
