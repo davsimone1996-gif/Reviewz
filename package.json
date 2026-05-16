@@ -10,12 +10,16 @@
     "preview": "vite preview",
     "android": "npm run build && npx cap sync android && npx cap open android",
     "android:sync": "npm run build && npx cap sync android",
-    "android:run": "npx cap run android"
+    "android:run": "npx cap run android",
+    "ios": "npm run build && npx cap sync ios && npx cap open ios",
+    "ios:sync": "npm run build && npx cap sync ios",
+    "ios:run": "npx cap run ios"
   },
   "dependencies": {
     "@capacitor/android": "^8.3.4",
     "@capacitor/cli": "^8.3.4",
     "@capacitor/core": "^8.3.4",
+    "@capacitor/ios": "^8.3.4",
     "@supabase/supabase-js": "^2.98.0",
     "@tanstack/react-query": "^5.90.21",
     "axios": "^1.13.6",
