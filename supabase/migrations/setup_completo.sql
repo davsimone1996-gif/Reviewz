@@ -357,13 +357,15 @@ create or replace function public.trigger_send_push_notification()
 returns trigger language plpgsql security definer as $$
 begin
   perform net.http_post(
-    url     := current_setting('app.edge_url') || '/send-push',
+    url     := 'https://tulptlzmskjuzuoztpvf.supabase.co/functions/v1/send-push'::text,
+    body    := row_to_json(NEW)::text,
     headers := jsonb_build_object(
       'Content-Type',     'application/json',
-      'x-webhook-secret', current_setting('app.webhook_secret')
-    ),
-    body    := row_to_json(NEW)::text
+      'x-webhook-secret', 'reviewz-secret-2026'
+    )
   );
+  return NEW;
+exception when others then
   return NEW;
 end;
 $$;
