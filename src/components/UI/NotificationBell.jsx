@@ -1,28 +1,70 @@
-import { useState, useEffect, useRef } from 'react'
-import { Bell, UserPlus, Heart, MessageCircle, X } from 'lucide-react'
+import { useState, useEffect, useRef, useCallback } from 'react'
+import { Bell, UserPlus, Heart, MessageCircle, X, Check } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { formatDistanceToNow } from 'date-fns'
 import { it } from 'date-fns/locale'
 import { fetchNotifications, markNotificationsRead, getUnreadNotificationsCount } from '../../lib/supabase'
 import { supabase } from '../../lib/supabase'
+import { registerSW, requestNotificationPermission, showBrowserNotification, buildNotificationPayload } from '../../lib/webPush'
 import Avatar from './Avatar'
+import Spinner from './Spinner'
+
+// ── Toast for incoming real-time notifications ────────────────────
+
+function NotificationToast({ notification, onDismiss }) {
+  useEffect(() => {
+    const t = setTimeout(onDismiss, 4000)
+    return () => clearTimeout(t)
+  }, [onDismiss])
+
+  const msg =
+    notification.type === 'follow'  ? 'ha iniziato a seguirti' :
+    notification.type === 'like'    ? 'ha messo like alla tua recensione' :
+                                      'ha commentato la tua recensione'
+
+  const linkTo = notification.post_id
+    ? `/post/${notification.post_id}`
+    : `/profile/${notification.actor?.username}`
+
+  return (
+    <Link
+      to={linkTo}
+      onClick={onDismiss}
+      className="fixed top-16 right-4 z-[60] max-w-xs w-full bg-surface-100 border border-white/10 rounded-2xl shadow-2xl shadow-black/60 p-3 flex items-center gap-3 animate-fade-in-up"
+    >
+      <Avatar src={notification.actor?.avatar_url} username={notification.actor?.username} size="sm" />
+      <div className="flex-1 min-w-0">
+        <p className="text-xs text-gray-100 leading-snug">
+          <span className="font-semibold">{notification.actor?.username}</span>{' '}
+          {msg}
+        </p>
+      </div>
+      <button
+        type="button"
+        onClick={(e) => { e.preventDefault(); e.stopPropagation(); onDismiss() }}
+        className="text-muted hover:text-white shrink-0"
+      >
+        <X size={13} />
+      </button>
+    </Link>
+  )
+}
+
+// ── Single notification row ───────────────────────────────────────
 
 function NotificationIcon({ type }) {
-  if (type === 'follow')  return <UserPlus  size={14} className="text-blue-400" />
-  if (type === 'like')    return <Heart     size={14} className="text-red-400"  />
+  if (type === 'follow')  return <UserPlus     size={14} className="text-blue-400"  />
+  if (type === 'like')    return <Heart        size={14} className="text-red-400"   />
   if (type === 'comment') return <MessageCircle size={14} className="text-green-400" />
   return null
 }
 
 function NotificationItem({ notification, onClose }) {
   const { type, actor, post_id, read, created_at } = notification
-
-  const message = () => {
-    if (type === 'follow')  return 'ha iniziato a seguirti'
-    if (type === 'like')    return 'ha messo like alla tua recensione'
-    if (type === 'comment') return 'ha commentato la tua recensione'
-    return ''
-  }
+  const msg =
+    type === 'follow'  ? 'ha iniziato a seguirti' :
+    type === 'like'    ? 'ha messo like alla tua recensione' :
+                         'ha commentato la tua recensione'
 
   const linkTo = post_id ? `/post/${post_id}` : `/profile/${actor?.username}`
 
@@ -38,7 +80,7 @@ function NotificationItem({ notification, onClose }) {
       <div className="flex-1 min-w-0">
         <p className="text-sm text-gray-100 leading-snug">
           <span className="font-semibold">{actor?.username}</span>{' '}
-          {message()}
+          {msg}
         </p>
         <p className="text-xs text-muted mt-0.5">
           {formatDistanceToNow(new Date(created_at), { addSuffix: true, locale: it })}
@@ -49,14 +91,41 @@ function NotificationItem({ notification, onClose }) {
   )
 }
 
+// ── Main component ────────────────────────────────────────────────
+
 export default function NotificationBell({ userId }) {
   const [open, setOpen]               = useState(false)
   const [notifications, setNotifications] = useState([])
   const [unread, setUnread]           = useState(0)
   const [loading, setLoading]         = useState(false)
+  const [toast, setToast]             = useState(null)
   const panelRef = useRef(null)
+  const openRef  = useRef(open)
+  openRef.current = open
 
-  // Load unread count on mount + realtime
+  const loadNotifications = useCallback(async () => {
+    if (!userId) return
+    setLoading(true)
+    try {
+      const data = await fetchNotifications(userId)
+      setNotifications(data)
+    } catch (e) {
+      console.error(e)
+    } finally {
+      setLoading(false)
+    }
+  }, [userId])
+
+  // Register SW + request permission once on mount
+  useEffect(() => {
+    if (!userId) return
+    registerSW()
+    // Request permission after a short delay so it doesn't feel abrupt
+    const t = setTimeout(() => requestNotificationPermission(), 3000)
+    return () => clearTimeout(t)
+  }, [userId])
+
+  // Initial unread count + realtime subscription
   useEffect(() => {
     if (!userId) return
 
@@ -67,7 +136,36 @@ export default function NotificationBell({ userId }) {
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${userId}` },
-        () => setUnread((n) => n + 1),
+        async (payload) => {
+          if (openRef.current) {
+            // Panel is open: prepend and mark read immediately
+            const newRow = payload.new
+            // Fetch actor details (the payload row has no join)
+            const { data: actor } = await supabase
+              .from('profiles')
+              .select('id, username, avatar_url')
+              .eq('id', newRow.actor_id)
+              .single()
+            const enriched = { ...newRow, actor, read: false }
+            setNotifications((prev) => [enriched, ...prev])
+            markNotificationsRead(userId).catch(() => {})
+          } else {
+            // Panel closed: bump count + in-app toast + native push
+            setUnread((n) => n + 1)
+            const { data: actor } = await supabase
+              .from('profiles')
+              .select('id, username, avatar_url')
+              .eq('id', payload.new.actor_id)
+              .single()
+            const enriched = { ...payload.new, actor }
+            setToast(enriched)
+            const pushPayload = buildNotificationPayload(enriched, actor)
+            showBrowserNotification(pushPayload.title, {
+              body: pushPayload.body,
+              data: { url: pushPayload.url },
+            })
+          }
+        },
       )
       .subscribe()
 
@@ -85,64 +183,85 @@ export default function NotificationBell({ userId }) {
   }, [open])
 
   const handleOpen = async () => {
-    setOpen((v) => !v)
-    if (!open && userId) {
-      setLoading(true)
-      try {
-        const data = await fetchNotifications(userId)
-        setNotifications(data)
-        if (unread > 0) {
-          await markNotificationsRead(userId)
-          setUnread(0)
-        }
-      } catch (e) {
-        console.error(e)
-      } finally {
-        setLoading(false)
+    const next = !open
+    setOpen(next)
+    if (next && userId) {
+      await loadNotifications()
+      if (unread > 0) {
+        markNotificationsRead(userId).catch(() => {})
+        setUnread(0)
       }
     }
   }
 
   return (
-    <div className="relative" ref={panelRef}>
-      <button
-        onClick={handleOpen}
-        className="btn-ghost p-2 relative"
-        title="Notifiche"
-      >
-        <Bell size={18} />
-        {unread > 0 && (
-          <span className="absolute top-0.5 right-0.5 min-w-[16px] h-4 rounded-full bg-accent text-white text-[10px] font-bold flex items-center justify-center px-0.5 leading-none">
-            {unread > 99 ? '99+' : unread}
-          </span>
-        )}
-      </button>
-
-      {open && (
-        <div className="absolute right-0 top-full mt-2 w-80 max-h-[420px] overflow-y-auto bg-surface border border-white/10 rounded-2xl shadow-2xl shadow-black/60 z-50 animate-fade-in">
-          {/* Header */}
-          <div className="flex items-center justify-between px-4 py-3 border-b border-white/5">
-            <span className="font-semibold text-sm">Notifiche</span>
-            <button onClick={() => setOpen(false)} className="btn-ghost p-1">
-              <X size={14} />
-            </button>
-          </div>
-
-          {loading && (
-            <div className="py-8 flex justify-center text-muted text-sm">Caricamento…</div>
-          )}
-
-          {!loading && notifications.length === 0 && (
-            <div className="py-10 text-center text-muted text-sm">
-              Nessuna notifica
-            </div>
-          )}
-
-          {!loading && notifications.map((n) => (
-            <NotificationItem key={n.id} notification={n} onClose={() => setOpen(false)} />
-          ))}
-        </div>
+    <>
+      {/* Toast for background notifications */}
+      {toast && (
+        <NotificationToast
+          notification={toast}
+          onDismiss={() => setToast(null)}
+        />
       )}
-    </div>
+
+      <div className="relative" ref={panelRef}>
+        <button
+          onClick={handleOpen}
+          className="btn-ghost p-2 relative"
+          title="Notifiche"
+        >
+          <Bell size={18} />
+          {unread > 0 && (
+            <span className="absolute top-0.5 right-0.5 min-w-[16px] h-4 rounded-full bg-accent text-white text-[10px] font-bold flex items-center justify-center px-0.5 leading-none">
+              {unread > 99 ? '99+' : unread}
+            </span>
+          )}
+        </button>
+
+        {open && (
+          <div className="absolute right-0 top-full mt-2 w-80 max-w-[calc(100vw-1rem)] max-h-[420px] overflow-y-auto bg-surface border border-white/10 rounded-2xl shadow-2xl shadow-black/60 z-50 animate-fade-in">
+            {/* Header */}
+            <div className="flex items-center justify-between px-4 py-3 border-b border-white/5 sticky top-0 bg-surface z-10">
+              <span className="font-semibold text-sm">Notifiche</span>
+              <div className="flex items-center gap-1">
+                {notifications.some((n) => !n.read) && (
+                  <button
+                    onClick={async () => {
+                      await markNotificationsRead(userId)
+                      setNotifications((prev) => prev.map((n) => ({ ...n, read: true })))
+                      setUnread(0)
+                    }}
+                    className="btn-ghost p-1 text-xs flex items-center gap-1 text-muted hover:text-accent"
+                    title="Segna tutto come letto"
+                  >
+                    <Check size={13} /> Letti
+                  </button>
+                )}
+                <button onClick={() => setOpen(false)} className="btn-ghost p-1">
+                  <X size={14} />
+                </button>
+              </div>
+            </div>
+
+            {loading && (
+              <div className="py-8 flex justify-center">
+                <Spinner className="w-5 h-5" />
+              </div>
+            )}
+
+            {!loading && notifications.length === 0 && (
+              <div className="py-10 text-center">
+                <Bell size={28} className="mx-auto text-muted mb-2 opacity-40" />
+                <p className="text-sm text-muted">Nessuna notifica</p>
+              </div>
+            )}
+
+            {!loading && notifications.map((n) => (
+              <NotificationItem key={n.id} notification={n} onClose={() => setOpen(false)} />
+            ))}
+          </div>
+        )}
+      </div>
+    </>
   )
 }
