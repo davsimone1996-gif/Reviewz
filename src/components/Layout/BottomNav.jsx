@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Home, Search, PlusCircle, User, Bell } from 'lucide-react'
+import { Home, Search, PlusCircle, User, Bell, Disc3 } from 'lucide-react'
 import { Link, useLocation } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { getUnreadNotificationsCount } from '../../lib/supabase'

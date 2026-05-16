@@ -22,3 +22,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Capacitor native (generated — rebuild with: npm run android:sync / ios:sync)
+android/
+ios/
