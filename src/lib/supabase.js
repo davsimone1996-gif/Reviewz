@@ -327,3 +327,48 @@ export const getUnreadNotificationsCount = async (userId) => {
   if (error) throw error
   return count ?? 0
 }
+
+// ─── Followed Artists ─────────────────────────────────────────────
+
+export const getFollowedArtists = async (userId) => {
+  const { data, error } = await supabase
+    .from('followed_artists')
+    .select('*')
+    .eq('user_id', userId)
+    .order('artist_name')
+  if (error) throw error
+  return data ?? []
+}
+
+export const isFollowingArtist = async (userId, spotifyArtistId) => {
+  const { data } = await supabase
+    .from('followed_artists')
+    .select('id')
+    .eq('user_id', userId)
+    .eq('spotify_artist_id', spotifyArtistId)
+    .maybeSingle()
+  return !!data
+}
+
+export const followArtist = async (userId, artist, latestRelease) => {
+  const { error } = await supabase
+    .from('followed_artists')
+    .upsert({
+      user_id:            userId,
+      spotify_artist_id:  artist.spotify_artist_id,
+      artist_name:        artist.artist_name,
+      artist_image_url:   artist.artist_image_url ?? null,
+      last_release_id:    latestRelease?.id ?? null,
+      last_release_title: latestRelease?.title ?? null,
+    }, { onConflict: 'user_id,spotify_artist_id' })
+  if (error) throw error
+}
+
+export const unfollowArtist = async (userId, spotifyArtistId) => {
+  const { error } = await supabase
+    .from('followed_artists')
+    .delete()
+    .eq('user_id', userId)
+    .eq('spotify_artist_id', spotifyArtistId)
+  if (error) throw error
+}

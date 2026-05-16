@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { Bell, UserPlus, Heart, MessageCircle, X, Check } from 'lucide-react'
+import { Bell, UserPlus, Heart, MessageCircle, Music2, X, Check } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { formatDistanceToNow } from 'date-fns'
 import { it } from 'date-fns/locale'
@@ -53,14 +53,44 @@ function NotificationToast({ notification, onDismiss }) {
 // ── Single notification row ───────────────────────────────────────
 
 function NotificationIcon({ type }) {
-  if (type === 'follow')  return <UserPlus     size={14} className="text-blue-400"  />
-  if (type === 'like')    return <Heart        size={14} className="text-red-400"   />
-  if (type === 'comment') return <MessageCircle size={14} className="text-green-400" />
+  if (type === 'follow')      return <UserPlus      size={14} className="text-blue-400"   />
+  if (type === 'like')        return <Heart         size={14} className="text-red-400"    />
+  if (type === 'comment')     return <MessageCircle size={14} className="text-green-400"  />
+  if (type === 'new_release') return <Music2        size={14} className="text-accent"     />
   return null
 }
 
 function NotificationItem({ notification, onClose }) {
-  const { type, actor, post_id, read, created_at } = notification
+  const { type, actor, post_id, read, created_at, metadata } = notification
+
+  if (type === 'new_release' && metadata) {
+    return (
+      <a
+        href={metadata.spotify_url}
+        target="_blank"
+        rel="noopener noreferrer"
+        onClick={onClose}
+        className={`flex items-start gap-3 px-4 py-3 hover:bg-surface-200/50 transition-colors ${
+          !read ? 'bg-accent/5 border-l-2 border-accent' : ''
+        }`}
+      >
+        {metadata.cover_url
+          ? <img src={metadata.cover_url} alt="" className="w-8 h-8 rounded-md object-cover shrink-0" />
+          : <div className="w-8 h-8 rounded-md bg-surface-200 flex items-center justify-center shrink-0"><Music2 size={14} className="text-accent" /></div>
+        }
+        <div className="flex-1 min-w-0">
+          <p className="text-sm leading-snug">
+            <span className="font-semibold">{metadata.artist_name}</span>: <span className="text-accent">{metadata.release_title}</span>
+          </p>
+          <p className="text-xs text-muted mt-0.5">
+            {formatDistanceToNow(new Date(created_at), { addSuffix: true, locale: it })}
+          </p>
+        </div>
+        <NotificationIcon type="new_release" />
+      </a>
+    )
+  }
+
   const msg =
     type === 'follow'  ? 'ha iniziato a seguirti' :
     type === 'like'    ? 'ha messo like alla tua recensione' :

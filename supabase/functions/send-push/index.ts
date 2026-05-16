@@ -36,27 +36,34 @@ Deno.serve(async (req: Request) => {
     return new Response('Bad Request', { status: 400 })
   }
 
-  const { user_id, actor_id, type, post_id } = notification as {
+  const { user_id, actor_id, type, post_id, metadata } = notification as {
     user_id:  string
-    actor_id: string
-    type:     'follow' | 'like' | 'comment'
+    actor_id: string | null
+    type:     'follow' | 'like' | 'comment' | 'new_release'
     post_id:  string | null
+    metadata: Record<string, string> | null
   }
 
-  // Fetch actor profile for notification copy
-  const { data: actor } = await supabase
-    .from('profiles')
-    .select('username')
-    .eq('id', actor_id)
-    .single()
+  // Build notification copy based on type
+  let body: string
+  let url:  string
 
-  const actorName = actor?.username ?? 'Qualcuno'
-  const body =
-    type === 'follow'  ? `${actorName} ha iniziato a seguirti` :
-    type === 'like'    ? `${actorName} ha messo like alla tua recensione` :
-                         `${actorName} ha commentato la tua recensione`
-
-  const url = post_id ? `/post/${post_id}` : `/profile/${actorName}`
+  if (type === 'new_release' && metadata) {
+    body = `${metadata.artist_name} ha pubblicato: ${metadata.release_title}`
+    url  = metadata.spotify_url ?? '/'
+  } else {
+    const { data: actor } = await supabase
+      .from('profiles')
+      .select('username')
+      .eq('id', actor_id!)
+      .single()
+    const actorName = actor?.username ?? 'Qualcuno'
+    body =
+      type === 'follow'  ? `${actorName} ha iniziato a seguirti` :
+      type === 'like'    ? `${actorName} ha messo like alla tua recensione` :
+                           `${actorName} ha commentato la tua recensione`
+    url = post_id ? `/post/${post_id}` : `/profile/${actorName}`
+  }
 
   // Fetch all active push subscriptions for the recipient
   const { data: rows, error: fetchErr } = await supabase
