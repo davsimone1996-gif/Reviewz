@@ -26,13 +26,16 @@ create table if not exists public.profiles (
 
 alter table public.profiles enable row level security;
 
-create policy if not exists "Public profiles are viewable by everyone"
+drop policy if exists "Public profiles are viewable by everyone" on public.profiles;
+create policy "Public profiles are viewable by everyone"
   on public.profiles for select using (true);
 
-create policy if not exists "Users can insert their own profile"
+drop policy if exists "Users can insert their own profile" on public.profiles;
+create policy "Users can insert their own profile"
   on public.profiles for insert with check (auth.uid() = id);
 
-create policy if not exists "Users can update their own profile"
+drop policy if exists "Users can update their own profile" on public.profiles;
+create policy "Users can update their own profile"
   on public.profiles for update using (auth.uid() = id);
 
 -- Auto-create profile on signup
@@ -76,16 +79,20 @@ create table if not exists public.posts (
 
 alter table public.posts enable row level security;
 
-create policy if not exists "Posts are viewable by everyone"
+drop policy if exists "Posts are viewable by everyone" on public.posts;
+create policy "Posts are viewable by everyone"
   on public.posts for select using (true);
 
-create policy if not exists "Authenticated users can create posts"
+drop policy if exists "Authenticated users can create posts" on public.posts;
+create policy "Authenticated users can create posts"
   on public.posts for insert with check (auth.uid() = user_id);
 
-create policy if not exists "Users can update their own posts"
+drop policy if exists "Users can update their own posts" on public.posts;
+create policy "Users can update their own posts"
   on public.posts for update using (auth.uid() = user_id);
 
-create policy if not exists "Users can delete their own posts"
+drop policy if exists "Users can delete their own posts" on public.posts;
+create policy "Users can delete their own posts"
   on public.posts for delete using (auth.uid() = user_id);
 
 -- ── TABLE: comments ──────────────────────────────────────────
@@ -100,13 +107,16 @@ create table if not exists public.comments (
 
 alter table public.comments enable row level security;
 
-create policy if not exists "Comments are viewable by everyone"
+drop policy if exists "Comments are viewable by everyone" on public.comments;
+create policy "Comments are viewable by everyone"
   on public.comments for select using (true);
 
-create policy if not exists "Authenticated users can comment"
+drop policy if exists "Authenticated users can comment" on public.comments;
+create policy "Authenticated users can comment"
   on public.comments for insert with check (auth.uid() = user_id);
 
-create policy if not exists "Users can delete their own comments"
+drop policy if exists "Users can delete their own comments" on public.comments;
+create policy "Users can delete their own comments"
   on public.comments for delete using (auth.uid() = user_id);
 
 create or replace function public.update_post_comments_count()
@@ -143,13 +153,16 @@ create table if not exists public.likes (
 
 alter table public.likes enable row level security;
 
-create policy if not exists "Likes are viewable by everyone"
+drop policy if exists "Likes are viewable by everyone" on public.likes;
+create policy "Likes are viewable by everyone"
   on public.likes for select using (true);
 
-create policy if not exists "Authenticated users can like"
+drop policy if exists "Authenticated users can like" on public.likes;
+create policy "Authenticated users can like"
   on public.likes for insert with check (auth.uid() = user_id);
 
-create policy if not exists "Users can unlike"
+drop policy if exists "Users can unlike" on public.likes;
+create policy "Users can unlike"
   on public.likes for delete using (auth.uid() = user_id);
 
 create or replace function public.update_likes_count()
@@ -197,13 +210,16 @@ create table if not exists public.follows (
 
 alter table public.follows enable row level security;
 
-create policy if not exists "Follows are viewable by everyone"
+drop policy if exists "Follows are viewable by everyone" on public.follows;
+create policy "Follows are viewable by everyone"
   on public.follows for select using (true);
 
-create policy if not exists "Authenticated users can follow"
+drop policy if exists "Authenticated users can follow" on public.follows;
+create policy "Authenticated users can follow"
   on public.follows for insert with check (auth.uid() = follower_id);
 
-create policy if not exists "Users can unfollow"
+drop policy if exists "Users can unfollow" on public.follows;
+create policy "Users can unfollow"
   on public.follows for delete using (auth.uid() = follower_id);
 
 create or replace function public.update_social_score_on_follow()
@@ -249,16 +265,18 @@ create table if not exists public.notifications (
 
 alter table public.notifications enable row level security;
 
-create policy if not exists "Users can view their own notifications"
+drop policy if exists "Users can view their own notifications" on public.notifications;
+create policy "Users can view their own notifications"
   on public.notifications for select using (auth.uid() = user_id);
 
-create policy if not exists "System can insert notifications"
+drop policy if exists "System can insert notifications" on public.notifications;
+create policy "System can insert notifications"
   on public.notifications for insert with check (true);
 
-create policy if not exists "Users can mark their notifications as read"
+drop policy if exists "Users can mark their notifications as read" on public.notifications;
+create policy "Users can mark their notifications as read"
   on public.notifications for update using (auth.uid() = user_id);
 
--- Trigger: notify on follow
 create or replace function public.notify_on_follow()
 returns trigger language plpgsql security definer as $$
 begin
@@ -273,7 +291,6 @@ create trigger on_follow_notify
   after insert on public.follows
   for each row execute function public.notify_on_follow();
 
--- Trigger: notify on like
 create or replace function public.notify_on_like()
 returns trigger language plpgsql security definer as $$
 declare post_author uuid;
@@ -292,7 +309,6 @@ create trigger on_like_notify
   after insert on public.likes
   for each row execute function public.notify_on_like();
 
--- Trigger: notify on comment
 create or replace function public.notify_on_comment()
 returns trigger language plpgsql security definer as $$
 declare post_author uuid;
@@ -322,12 +338,12 @@ create table if not exists public.push_subscriptions (
 
 alter table public.push_subscriptions enable row level security;
 
-create policy if not exists "Users can manage their own push subscriptions"
+drop policy if exists "Users can manage their own push subscriptions" on public.push_subscriptions;
+create policy "Users can manage their own push subscriptions"
   on public.push_subscriptions for all
   using  (auth.uid() = user_id)
   with check (auth.uid() = user_id);
 
--- ── Trigger: push notification on new notification row ────────
 create or replace function public.trigger_send_push_notification()
 returns trigger language plpgsql security definer as $$
 begin
@@ -350,52 +366,56 @@ create trigger on_notification_send_push
 
 -- ── TABLE: followed_artists ───────────────────────────────────
 create table if not exists public.followed_artists (
-  id                uuid primary key default uuid_generate_v4(),
-  user_id           uuid not null references public.profiles(id) on delete cascade,
-  spotify_artist_id text not null,
-  artist_name       text not null,
-  artist_image_url  text,
-  last_release_id   text,
+  id                 uuid primary key default uuid_generate_v4(),
+  user_id            uuid not null references public.profiles(id) on delete cascade,
+  spotify_artist_id  text not null,
+  artist_name        text not null,
+  artist_image_url   text,
+  last_release_id    text,
   last_release_title text,
-  created_at        timestamptz not null default now(),
+  created_at         timestamptz not null default now(),
   constraint followed_artists_unique unique (user_id, spotify_artist_id)
 );
 
 alter table public.followed_artists enable row level security;
 
-create policy if not exists "Users can manage their own followed artists"
+drop policy if exists "Users can manage their own followed artists" on public.followed_artists;
+create policy "Users can manage their own followed artists"
   on public.followed_artists for all
   using  (auth.uid() = user_id)
   with check (auth.uid() = user_id);
 
 -- ── INDEXES ───────────────────────────────────────────────────
-create index if not exists posts_user_id_idx               on public.posts(user_id);
-create index if not exists posts_created_at_idx            on public.posts(created_at desc);
-create index if not exists comments_post_id_idx            on public.comments(post_id);
-create index if not exists likes_post_id_idx               on public.likes(post_id);
-create index if not exists likes_comment_id_idx            on public.likes(comment_id);
-create index if not exists follows_follower_id_idx         on public.follows(follower_id);
-create index if not exists follows_following_id_idx        on public.follows(following_id);
-create index if not exists notifications_user_id_idx       on public.notifications(user_id);
-create index if not exists notifications_created_at_idx    on public.notifications(created_at desc);
-create index if not exists push_subscriptions_user_id_idx  on public.push_subscriptions(user_id);
-create index if not exists followed_artists_user_id_idx    on public.followed_artists(user_id);
-create index if not exists followed_artists_artist_id_idx  on public.followed_artists(spotify_artist_id);
+create index if not exists posts_user_id_idx              on public.posts(user_id);
+create index if not exists posts_created_at_idx           on public.posts(created_at desc);
+create index if not exists comments_post_id_idx           on public.comments(post_id);
+create index if not exists likes_post_id_idx              on public.likes(post_id);
+create index if not exists likes_comment_id_idx           on public.likes(comment_id);
+create index if not exists follows_follower_id_idx        on public.follows(follower_id);
+create index if not exists follows_following_id_idx       on public.follows(following_id);
+create index if not exists notifications_user_id_idx      on public.notifications(user_id);
+create index if not exists notifications_created_at_idx   on public.notifications(created_at desc);
+create index if not exists push_subscriptions_user_id_idx on public.push_subscriptions(user_id);
+create index if not exists followed_artists_user_id_idx   on public.followed_artists(user_id);
+create index if not exists followed_artists_artist_id_idx on public.followed_artists(spotify_artist_id);
 
 -- ── STORAGE: avatars bucket ───────────────────────────────────
 insert into storage.buckets (id, name, public)
   values ('avatars', 'avatars', true)
   on conflict (id) do nothing;
 
-create policy if not exists "Users can upload their own avatar"
+drop policy if exists "Users can upload their own avatar" on storage.objects;
+create policy "Users can upload their own avatar"
   on storage.objects for insert to authenticated
   with check (bucket_id = 'avatars' and (storage.foldername(name))[1] = auth.uid()::text);
 
-create policy if not exists "Users can update their own avatar"
+drop policy if exists "Users can update their own avatar" on storage.objects;
+create policy "Users can update their own avatar"
   on storage.objects for update to authenticated
   using (bucket_id = 'avatars' and (storage.foldername(name))[1] = auth.uid()::text);
 
-create policy if not exists "Avatars are publicly readable"
+drop policy if exists "Avatars are publicly readable" on storage.objects;
+create policy "Avatars are publicly readable"
   on storage.objects for select to public
   using (bucket_id = 'avatars');
 
