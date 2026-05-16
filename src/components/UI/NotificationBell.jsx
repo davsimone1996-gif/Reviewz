@@ -5,7 +5,7 @@ import { formatDistanceToNow } from 'date-fns'
 import { it } from 'date-fns/locale'
 import { fetchNotifications, markNotificationsRead, getUnreadNotificationsCount } from '../../lib/supabase'
 import { supabase } from '../../lib/supabase'
-import { registerSW, requestNotificationPermission, showBrowserNotification, buildNotificationPayload } from '../../lib/webPush'
+import { showBrowserNotification, buildNotificationPayload } from '../../lib/webPush'
 import Avatar from './Avatar'
 import Spinner from './Spinner'
 
@@ -114,15 +114,6 @@ export default function NotificationBell({ userId }) {
     } finally {
       setLoading(false)
     }
-  }, [userId])
-
-  // Register SW + request permission once on mount
-  useEffect(() => {
-    if (!userId) return
-    registerSW()
-    // Request permission after a short delay so it doesn't feel abrupt
-    const t = setTimeout(() => requestNotificationPermission(), 3000)
-    return () => clearTimeout(t)
   }, [userId])
 
   // Initial unread count + realtime subscription

@@ -11,6 +11,7 @@ import SpotifyCallbackPage from './pages/SpotifyCallbackPage'
 import NotificationsPage from './pages/NotificationsPage'
 import useAuthStore from './store/authStore'
 import { fetchProfile } from './lib/supabase'
+import { registerSW, subscribeToPush } from './lib/webPush'
 
 function App() {
   const { initialize, user, loading, setProfile } = useAuthStore()
@@ -19,12 +20,14 @@ function App() {
     initialize()
   }, [initialize])
 
-  // Fetch profile only after session initialization is complete
+  // Fetch profile + register push only after session is verified
   useEffect(() => {
     if (loading || !user) return
-    fetchProfile(user.id)
-      .then(setProfile)
-      .catch(() => {})
+    fetchProfile(user.id).then(setProfile).catch(() => {})
+    // Register SW immediately; subscribe to push after 4s (non-blocking)
+    registerSW()
+    const t = setTimeout(() => subscribeToPush(user.id), 4000)
+    return () => clearTimeout(t)
   }, [user, loading, setProfile])
 
   return (
