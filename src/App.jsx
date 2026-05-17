@@ -9,6 +9,7 @@ import SearchPage from './pages/SearchPage'
 import NewReleasesPage from './pages/NewReleasesPage'
 import SpotifyCallbackPage from './pages/SpotifyCallbackPage'
 import NotificationsPage from './pages/NotificationsPage'
+import ArtistPage from './pages/ArtistPage'
 import useAuthStore from './store/authStore'
 import { fetchProfile } from './lib/supabase'
 import { registerSW, subscribeToPush } from './lib/webPush'
@@ -41,6 +42,7 @@ function App() {
         <Route path="/nuove-uscite"      element={<NewReleasesPage />} />
         <Route path="/spotify-callback"  element={<SpotifyCallbackPage />} />
         <Route path="/notifications"     element={<NotificationsPage />} />
+        <Route path="/artist/:name"      element={<ArtistPage />} />
         <Route path="*"                  element={<Navigate to="/" replace />} />
       </Routes>
     </Layout>

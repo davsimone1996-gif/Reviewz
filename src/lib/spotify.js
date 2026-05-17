@@ -140,6 +140,31 @@ export async function searchArtists(query, limit = 8) {
 }
 
 /**
+ * Fetch a single artist by Spotify ID
+ */
+export async function getArtist(artistId) {
+  const data = await spotifyFetch(`/artists/${artistId}`)
+  return {
+    spotify_artist_id: data.id,
+    artist_name:       data.name,
+    artist_image_url:  data.images?.[0]?.url ?? null,
+    genres:            data.genres?.slice(0, 3) ?? [],
+    followers:         data.followers?.total ?? 0,
+    spotify_url:       data.external_urls?.spotify ?? null,
+  }
+}
+
+/**
+ * Fetch discography for a given Spotify artist ID
+ */
+export async function getArtistAlbums(artistId, limit = 20) {
+  const data = await spotifyFetch(
+    `/artists/${artistId}/albums?album_type=album,single,ep&market=IT&limit=${limit}`
+  )
+  return (data.items ?? []).map(normaliseAlbum)
+}
+
+/**
  * Fetch the most recent album/single for a given Spotify artist ID
  */
 export async function getArtistLatestRelease(artistId) {

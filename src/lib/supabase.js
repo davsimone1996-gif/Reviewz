@@ -364,6 +364,17 @@ export const followArtist = async (userId, artist, latestRelease) => {
   if (error) throw error
 }
 
+export const fetchPostsByArtistName = async (artistName, limit = 50) => {
+  const { data, error } = await supabase
+    .from('posts')
+    .select('*, profiles(id, username, avatar_url, social_score)')
+    .ilike('artist', artistName)
+    .order('created_at', { ascending: false })
+    .limit(limit)
+  if (error) throw error
+  return data ?? []
+}
+
 export const unfollowArtist = async (userId, spotifyArtistId) => {
   const { error } = await supabase
     .from('followed_artists')

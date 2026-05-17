@@ -1,10 +1,11 @@
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { Heart, ExternalLink, Trash2, Music, Disc3, ArrowLeft, Loader2, Share2 } from 'lucide-react'
+import { Heart, ExternalLink, Trash2, Music, Disc3, ArrowLeft, Loader2, Share2, Bookmark } from 'lucide-react'
 import { useState } from 'react'
 import { formatDistanceToNow } from 'date-fns'
 import { usePost } from '../hooks/usePost'
 import { likePost, unlikePost, deletePost } from '../lib/supabase'
+import { isSpotifyConnected, getStoredTokens } from '../lib/spotifyAuth'
 import useAuthStore from '../store/authStore'
 import CommentSection from '../components/Post/CommentSection'
 import ShareCardModal from '../components/Post/ShareCardModal'
@@ -30,6 +31,17 @@ export default function PostDetailPage() {
   const [liked, setLiked]       = useState(false)
   const [heartAnim, setHeartAnim] = useState(false)
   const [showShare, setShowShare] = useState(false)
+  const [saved, setSaved]         = useState(false)
+
+  const saveToSpotify = async () => {
+    const { accessToken } = getStoredTokens()
+    if (!accessToken) return
+    await fetch(`https://api.spotify.com/v1/me/tracks?ids=${post.spotify_id}`, {
+      method: 'PUT',
+      headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids: [post.spotify_id] }),
+    })
+  }
 
   const handleLike = async () => {
     if (!user || !post) return
@@ -108,7 +120,12 @@ export default function PostDetailPage() {
               <h1 className="text-xl sm:text-2xl font-bold text-white leading-tight drop-shadow-lg truncate">
                 {post.title}
               </h1>
-              <p className="text-white/70 mt-0.5 drop-shadow truncate">{post.artist}</p>
+              <Link
+                to={`/artist/${encodeURIComponent(post.artist)}`}
+                className="text-white/70 hover:text-white mt-0.5 drop-shadow truncate block transition-colors"
+              >
+                {post.artist}
+              </Link>
             </div>
           </div>
         </div>
@@ -117,14 +134,25 @@ export default function PostDetailPage() {
           {/* Rating + Spotify link */}
           <div className="flex items-center justify-between">
             <StarRating value={post.rating} size="lg" />
-            <a
-              href={post.spotify_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-1.5 text-sm font-medium text-[#1DB954] hover:text-[#1ed760] transition-colors"
-            >
-              <ExternalLink size={14} /> Open in Spotify
-            </a>
+            <div className="flex items-center gap-3">
+              <a
+                href={post.spotify_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1.5 text-sm font-medium text-[#1DB954] hover:text-[#1ed760] transition-colors"
+              >
+                <ExternalLink size={14} /> Open in Spotify
+              </a>
+              {user && post.spotify_type === 'track' && isSpotifyConnected() && (
+                <button
+                  onClick={async () => { await saveToSpotify(); setSaved(true); setTimeout(() => setSaved(false), 2000) }}
+                  className="flex items-center gap-1.5 text-sm font-medium text-muted hover:text-green-400 transition-colors"
+                >
+                  <Bookmark size={14} className={saved ? 'fill-green-400 text-green-400' : ''} />
+                  {saved ? 'Salvato!' : 'Salva'}
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Review */}
