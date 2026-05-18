@@ -243,20 +243,13 @@ export default function HomePage() {
     <>
       {!user && <HeroSection onSignIn={() => setShowAuth(true)} />}
 
-      {user ? (
+      {user && (
         <>
           <ReleasesHero userId={user.id} />
           <div id="feed" className="max-w-2xl mx-auto mt-6">
             <Feed />
           </div>
         </>
-      ) : (
-        <div id="feed" className="max-w-2xl mx-auto">
-          <div className="mb-5 flex items-center justify-between animate-fade-in-up">
-            <h2 className="text-lg font-semibold text-gray-100">Latest Reviews</h2>
-          </div>
-          <Feed />
-        </div>
       )}
 
       {showAuth && <AuthModal onClose={() => setShowAuth(false)} />}
