@@ -5,7 +5,7 @@ import Feed from '../components/Feed/Feed'
 import useAuthStore from '../store/authStore'
 import AuthModal from '../components/Auth/AuthModal'
 import Spinner from '../components/UI/Spinner'
-import { Music2, Star, Users, Zap, ArrowRight } from 'lucide-react'
+import { Music2, Star, Users, Zap, ArrowRight, UserCheck, TrendingUp } from 'lucide-react'
 import { getFollowedArtists } from '../lib/supabase'
 import { getAlbum } from '../lib/spotify'
 
@@ -235,9 +235,15 @@ function ReleasesHero({ userId }) {
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
+const TABS = [
+  { id: 'following', label: 'Follower',  icon: UserCheck  },
+  { id: 'trending',  label: 'Trending',  icon: TrendingUp },
+]
+
 export default function HomePage() {
   const { user } = useAuthStore()
   const [showAuth, setShowAuth] = useState(false)
+  const [activeTab, setActiveTab] = useState('following')
 
   return (
     <>
@@ -246,8 +252,27 @@ export default function HomePage() {
       {user && (
         <>
           <ReleasesHero userId={user.id} />
+
           <div id="feed" className="max-w-2xl mx-auto mt-6">
-            <Feed />
+            {/* Tab bar */}
+            <div className="flex gap-1 bg-surface-200/50 p-1 rounded-2xl mb-4">
+              {TABS.map(({ id, label, icon: Icon }) => (
+                <button
+                  key={id}
+                  onClick={() => setActiveTab(id)}
+                  className={`flex items-center justify-center gap-2 flex-1 py-2 rounded-xl text-sm font-semibold transition-all duration-200 ${
+                    activeTab === id
+                      ? 'bg-surface-100 text-gray-100 shadow-sm'
+                      : 'text-muted hover:text-gray-300'
+                  }`}
+                >
+                  <Icon size={14} strokeWidth={activeTab === id ? 2.5 : 2} />
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            <Feed mode={activeTab} />
           </div>
         </>
       )}
