@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Edit2, Check, X, UserCheck, UserPlus, Music2, Headphones, LogOut, Camera } from 'lucide-react'
-import { followUser, unfollowUser, updateProfile, updateNowPlaying, uploadAvatar } from '../../lib/supabase'
+import { followUser, unfollowUser, updateProfile, updateNowPlaying, uploadAvatar, uploadCover } from '../../lib/supabase'
 import { startSpotifyAuth, isSpotifyConnected, getCurrentlyPlaying, clearSpotifyTokens } from '../../lib/spotifyAuth'
 import useAuthStore from '../../store/authStore'
 import Avatar from '../UI/Avatar'
@@ -51,6 +51,7 @@ export default function ProfileHeader({ profile, isFollowing, isOwn, postCount =
   const [bio, setBio]                 = useState(profile.bio ?? '')
   const [spotifyConnected, setSpotifyConnected] = useState(false)
   const avatarInputRef = useRef(null)
+  const coverInputRef  = useRef(null)
 
   // Check Spotify connection status on mount (only for own profile)
   useEffect(() => {
@@ -128,6 +129,21 @@ export default function ProfileHeader({ profile, isFollowing, isOwn, postCount =
     e.target.value = ''
   }
 
+  const coverMut = useMutation({
+    mutationFn: (file) => uploadCover(user.id, file),
+    onSuccess: (updated) => {
+      setStoreProfile({ ...profile, ...updated })
+      qc.invalidateQueries({ queryKey: ['profile', profile.username] })
+    },
+  })
+
+  const handleCoverChange = (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    coverMut.mutate(file)
+    e.target.value = ''
+  }
+
   const handleDisconnectSpotify = () => {
     clearSpotifyTokens()
     setSpotifyConnected(false)
@@ -142,9 +158,44 @@ export default function ProfileHeader({ profile, isFollowing, isOwn, postCount =
   return (
     <div className="card animate-fade-in-up overflow-visible">
       {/* Cover banner */}
-      <div className="h-28 sm:h-36 bg-gradient-to-br from-accent/30 via-surface-200 to-surface-100 relative overflow-hidden rounded-t-2xl">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-orange-500/20 via-transparent to-transparent" />
-        <div className="absolute -right-10 -top-10 w-40 h-40 rounded-full bg-accent/10 blur-3xl" />
+      <div className="h-28 sm:h-36 relative overflow-hidden rounded-t-2xl">
+        {profile.cover_url ? (
+          <img
+            src={profile.cover_url}
+            alt="Cover"
+            className="absolute inset-0 w-full h-full object-cover"
+          />
+        ) : (
+          <>
+            <div className="absolute inset-0 bg-gradient-to-br from-accent/30 via-surface-200 to-surface-100" />
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-orange-500/20 via-transparent to-transparent" />
+            <div className="absolute -right-10 -top-10 w-40 h-40 rounded-full bg-accent/10 blur-3xl" />
+          </>
+        )}
+
+        {/* Upload overlay — only for own profile */}
+        {isOwn && (
+          <button
+            onClick={() => coverInputRef.current?.click()}
+            disabled={coverMut.isPending}
+            className="absolute inset-0 flex items-center justify-center bg-black/0 hover:bg-black/40 transition-colors group rounded-t-2xl"
+            title="Cambia immagine di copertina"
+          >
+            <span className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-2 bg-black/60 text-white text-xs font-semibold px-3 py-1.5 rounded-full">
+              {coverMut.isPending
+                ? <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                : <Camera size={13} />}
+              {coverMut.isPending ? 'Caricamento…' : 'Cambia copertina'}
+            </span>
+          </button>
+        )}
+        <input
+          ref={coverInputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={handleCoverChange}
+        />
       </div>
 
       <div className="px-5 pb-5">

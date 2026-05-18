@@ -267,6 +267,28 @@ export const uploadAvatar = async (userId, file) => {
   return profile
 }
 
+export const uploadCover = async (userId, file) => {
+  const ext = file.name.split('.').pop()
+  const path = `${userId}/cover.${ext}`
+
+  const { error: uploadError } = await supabase.storage
+    .from('avatars')
+    .upload(path, file, { upsert: true })
+  if (uploadError) throw uploadError
+
+  const { data } = supabase.storage.from('avatars').getPublicUrl(path)
+  const coverUrl = `${data.publicUrl}?t=${Date.now()}`
+
+  const { data: profile, error } = await supabase
+    .from('profiles')
+    .update({ cover_url: coverUrl, updated_at: new Date().toISOString() })
+    .eq('id', userId)
+    .select()
+    .single()
+  if (error) throw error
+  return profile
+}
+
 // ─── Follow helpers ───────────────────────────────────────────────
 
 export const followUser = async (followerId, followingId) => {
