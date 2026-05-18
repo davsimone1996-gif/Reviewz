@@ -1,8 +1,8 @@
 import { useEffect, useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Music2 } from 'lucide-react'
-import { exchangeCodeForTokens } from '../lib/spotifyAuth'
-import { fetchProfile } from '../lib/supabase'
+import { exchangeCodeForTokens, getSpotifyUser } from '../lib/spotifyAuth'
+import { fetchProfile, updateSpotifyProfileUrl } from '../lib/supabase'
 import useAuthStore from '../store/authStore'
 
 export default function SpotifyCallbackPage() {
@@ -41,7 +41,19 @@ export default function SpotifyCallbackPage() {
 
     exchangeCodeForTokens(code)
       .then(async () => {
-        // If profile is already in store use it; otherwise fetch from Supabase
+        // Save Spotify profile URL to Supabase (best-effort)
+        if (user?.id) {
+          try {
+            const spotifyUser = await getSpotifyUser()
+            if (spotifyUser?.spotify_url) {
+              await updateSpotifyProfileUrl(user.id, spotifyUser.spotify_url)
+            }
+          } catch {
+            // non-blocking — ignore errors
+          }
+        }
+
+        // Navigate to user profile
         let username = profile?.username
         if (!username && user?.id) {
           try {
@@ -49,7 +61,7 @@ export default function SpotifyCallbackPage() {
             setProfile(p)
             username = p?.username
           } catch {
-            // ignore — fall back to home
+            // fall back to home
           }
         }
         navigate(username ? `/profile/${username}` : '/', { replace: true })
