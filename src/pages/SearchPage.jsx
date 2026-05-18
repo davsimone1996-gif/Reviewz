@@ -209,8 +209,8 @@ export default function SearchPage() {
       )}
 
       {!q && (
-        <div className="card p-10 text-center">
-          <p className="text-4xl mb-3">🎵</p>
+        <div className="card p-6 sm:p-10 text-center">
+          <p className="text-2xl sm:text-4xl mb-3">🎵</p>
           <p className="font-semibold">Cerca qualsiasi cosa</p>
           <p className="text-muted text-sm mt-1">Brani, album, artisti o utenti — segui un artista per ricevere notifiche sulle nuove uscite</p>
         </div>
@@ -223,8 +223,8 @@ export default function SearchPage() {
       {!profilesLoading && q && (
         <div className="space-y-6">
           {musicDone && artistsDone && total === 0 && (
-            <div className="card p-10 text-center">
-              <p className="text-4xl mb-3">🔍</p>
+            <div className="card p-6 sm:p-10 text-center">
+              <p className="text-2xl sm:text-4xl mb-3">🔍</p>
               <p className="font-semibold">Nessun risultato per "{q}"</p>
             </div>
           )}

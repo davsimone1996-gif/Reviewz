@@ -6,7 +6,7 @@
 
 const SPOTIFY_AUTH_BASE = 'https://accounts.spotify.com'
 const SPOTIFY_API_BASE  = 'https://api.spotify.com/v1'
-const SCOPES = 'user-read-currently-playing user-read-playback-state'
+const SCOPES = 'user-read-currently-playing user-read-playback-state user-library-modify user-library-read'
 const LS_PREFIX = 'reviewz_sp_'
 
 // ─── PKCE helpers ────────────────────────────────────────────────
@@ -91,6 +91,8 @@ export async function exchangeCodeForTokens(code) {
   const clientId = import.meta.env.VITE_SPOTIFY_CLIENT_ID
   const verifier = sessionStorage.getItem('spotify_pkce_verifier')
   const redirectUri = `${window.location.origin}/spotify-callback`
+
+  if (!verifier) throw new Error('PKCE verifier missing — session may have been lost. Please try again.')
 
   const body = new URLSearchParams({
     client_id:     clientId,

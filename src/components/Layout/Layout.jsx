@@ -5,7 +5,7 @@ export default function Layout({ children }) {
   return (
     <div className="min-h-screen bg-surface">
       <Navbar />
-      <main className="max-w-5xl mx-auto px-4 pt-20 md:pb-12" style={{ paddingBottom: 'calc(6rem + env(safe-area-inset-bottom))' }}>
+      <main className="max-w-5xl mx-auto px-3 sm:px-4 pt-16 sm:pt-20" style={{ paddingBottom: 'calc(5rem + env(safe-area-inset-bottom))' }}>
         {children}
       </main>
       <BottomNav />

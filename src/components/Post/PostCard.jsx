@@ -85,7 +85,13 @@ export default function PostCard({ post, isLiked = false, compact = false }) {
                   <h3 className="font-bold text-gray-100 truncate group-hover:text-accent transition-colors leading-tight">
                     {post.title}
                   </h3>
-                  <p className="text-sm text-muted truncate">{post.artist}</p>
+                  <Link
+                    to={`/artist/${encodeURIComponent(post.artist)}`}
+                    onClick={(e) => e.stopPropagation()}
+                    className="text-sm text-muted truncate hover:text-accent transition-colors block"
+                  >
+                    {post.artist}
+                  </Link>
                 </div>
 
                 {/* Rating pill */}

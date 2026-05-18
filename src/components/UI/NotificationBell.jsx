@@ -240,7 +240,7 @@ export default function NotificationBell({ userId }) {
         </button>
 
         {open && (
-          <div className="absolute right-0 top-full mt-2 w-80 max-w-[calc(100vw-1rem)] max-h-[420px] overflow-y-auto bg-surface border border-white/10 rounded-2xl shadow-2xl shadow-black/60 z-50 animate-fade-in">
+          <div className="absolute right-0 top-full mt-2 w-[calc(100vw-2rem)] sm:w-80 max-h-[420px] overflow-y-auto bg-surface border border-white/10 rounded-2xl shadow-2xl shadow-black/60 z-50 animate-fade-in">
             {/* Header */}
             <div className="flex items-center justify-between px-4 py-3 border-b border-white/5 sticky top-0 bg-surface z-10">
               <span className="font-semibold text-sm">Notifiche</span>
