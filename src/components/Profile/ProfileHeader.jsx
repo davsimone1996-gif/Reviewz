@@ -37,7 +37,7 @@ function NowPlayingBadge({ track }) {
           className="w-5 h-5 rounded object-cover shrink-0"
         />
       )}
-      <span className="text-xs text-green-400 truncate max-w-[200px] group-hover:underline">
+      <span className="text-xs text-green-400 truncate max-w-[130px] sm:max-w-[200px] group-hover:underline">
         {track.now_playing_title} · {track.now_playing_artist}
       </span>
     </a>

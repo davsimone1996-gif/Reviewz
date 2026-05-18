@@ -126,7 +126,7 @@ function AlbumGrid({ albums }) {
     <p className="text-muted text-sm text-center py-8">No albums found.</p>
   )
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
       {albums.map((album) => (
         <a
           key={album.spotify_id}
@@ -271,7 +271,7 @@ export default function ArtistPage() {
 
   if (!artistData || artistError) return (
     <div className="text-center py-24">
-      <p className="text-5xl mb-4">🎵</p>
+      <p className="text-3xl sm:text-5xl mb-4">🎵</p>
       <p className="text-muted">Artist not found.</p>
       <Link to="/" className="btn-primary mt-4 inline-flex">Back to Feed</Link>
     </div>
@@ -321,7 +321,7 @@ export default function ArtistPage() {
 
         <div className="p-5">
           {/* Stats row */}
-          <div className="flex items-center gap-5 mb-4 flex-wrap">
+          <div className="flex items-center gap-3 sm:gap-5 mb-4 flex-wrap">
             <div className="flex items-center gap-1.5 text-sm text-muted">
               <Users size={14} />
               <span>{formatFollowers(artistData.followers)} followers</span>

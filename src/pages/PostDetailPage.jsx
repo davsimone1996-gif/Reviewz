@@ -68,7 +68,7 @@ export default function PostDetailPage() {
   )
   if (!post) return (
     <div className="text-center py-24">
-      <p className="text-5xl mb-4">🎵</p>
+      <p className="text-3xl sm:text-5xl mb-4">🎵</p>
       <p className="text-muted">Review not found.</p>
       <Link to="/" className="btn-primary mt-4 inline-flex">Back to Feed</Link>
     </div>

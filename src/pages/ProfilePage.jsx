@@ -22,7 +22,7 @@ export default function ProfilePage() {
   )
   if (!profile) return (
     <div className="text-center py-24">
-      <p className="text-5xl mb-3">👤</p>
+      <p className="text-3xl sm:text-5xl mb-3">👤</p>
       <p className="text-muted">User not found.</p>
     </div>
   )
@@ -47,7 +47,7 @@ export default function ProfilePage() {
         {postsLoading ? (
           <div className="flex justify-center py-8"><Spinner className="w-6 h-6" /></div>
         ) : posts.length === 0 ? (
-          <div className="card p-10 flex flex-col items-center gap-3 text-center">
+          <div className="card p-6 sm:p-10 flex flex-col items-center gap-3 text-center">
             <div className="w-14 h-14 rounded-2xl bg-surface-200 flex items-center justify-center">
               <Music2 size={24} className="text-muted" />
             </div>
