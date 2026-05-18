@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useSearchParams, useNavigate } from 'react-router-dom'
+import { useSearchParams, useNavigate, Link } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Music, Disc3, Search as SearchIcon, Play, PenLine, Users, Mic2, Bell, BellOff } from 'lucide-react'
 import { searchSpotify, searchArtists, getArtistLatestRelease } from '../lib/spotify'
@@ -102,30 +102,34 @@ function ArtistCard({ artist }) {
 
   return (
     <div className="card-hover p-4 flex items-center gap-4 animate-fade-in-up group">
-      {artist.artist_image_url ? (
-        <img
-          src={artist.artist_image_url}
-          alt={artist.artist_name}
-          className="w-14 h-14 rounded-full object-cover shadow-lg shrink-0"
-        />
-      ) : (
-        <div className="w-14 h-14 rounded-full bg-surface-200 flex items-center justify-center text-muted shrink-0">
-          <Mic2 size={22} />
-        </div>
-      )}
-
-      <div className="flex-1 min-w-0">
-        <p className="font-semibold truncate group-hover:text-accent transition-colors">
-          {artist.artist_name}
-        </p>
-        {artist.genres.length > 0 && (
-          <p className="text-xs text-muted truncate">{artist.genres.join(' · ')}</p>
+      <Link
+        to={`/artist/${encodeURIComponent(artist.artist_name)}`}
+        className="flex items-center gap-4 flex-1 min-w-0"
+      >
+        {artist.artist_image_url ? (
+          <img
+            src={artist.artist_image_url}
+            alt={artist.artist_name}
+            className="w-14 h-14 rounded-full object-cover shadow-lg shrink-0"
+          />
+        ) : (
+          <div className="w-14 h-14 rounded-full bg-surface-200 flex items-center justify-center text-muted shrink-0">
+            <Mic2 size={22} />
+          </div>
         )}
-      </div>
+        <div className="min-w-0">
+          <p className="font-semibold truncate group-hover:text-accent transition-colors">
+            {artist.artist_name}
+          </p>
+          {artist.genres.length > 0 && (
+            <p className="text-xs text-muted truncate">{artist.genres.join(' · ')}</p>
+          )}
+        </div>
+      </Link>
 
       {user && (
         <button
-          onClick={() => followMut.mutate()}
+          onClick={(e) => { e.preventDefault(); followMut.mutate() }}
           disabled={followMut.isPending || checkingFollow}
           className={`shrink-0 flex items-center gap-1.5 text-xs py-1.5 px-3 rounded-xl font-semibold transition-all ${
             following
