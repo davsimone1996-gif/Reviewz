@@ -169,6 +169,19 @@ async function userSpotifyFetch(endpoint) {
   return res.json()
 }
 
+// ─── Spotify User Profile ─────────────────────────────────────────
+
+export async function getSpotifyUser() {
+  const data = await userSpotifyFetch('/me')
+  if (!data) return null
+  return {
+    spotify_user_id:  data.id,
+    spotify_username: data.display_name ?? data.id,
+    spotify_url:      data.external_urls?.spotify ?? null,
+    spotify_image:    data.images?.[0]?.url ?? null,
+  }
+}
+
 // ─── Currently Playing ────────────────────────────────────────────
 
 export async function getCurrentlyPlaying() {

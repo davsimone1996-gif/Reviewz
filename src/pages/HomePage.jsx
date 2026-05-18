@@ -5,9 +5,10 @@ import Feed from '../components/Feed/Feed'
 import useAuthStore from '../store/authStore'
 import AuthModal from '../components/Auth/AuthModal'
 import Spinner from '../components/UI/Spinner'
-import { Music2, Star, Users, Zap, ArrowRight, UserCheck, TrendingUp } from 'lucide-react'
+import { Music2, Star, Users, Zap, ArrowRight, UserCheck, TrendingUp, X } from 'lucide-react'
 import { getFollowedArtists } from '../lib/supabase'
 import { getAlbum } from '../lib/spotify'
+import { getLastFridayDate } from '../lib/spotify'
 
 // ─── Non-logged hero ─────────────────────────────────────────────────────────
 
@@ -80,7 +81,7 @@ function formatItalianDate(dateStr) {
   return d.toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric' })
 }
 
-function ReleasesHero({ userId }) {
+function ReleasesHero({ userId, onClose }) {
   // 1. Fetch followed artists
   const { data: followedArtists, isLoading: loadingArtists } = useQuery({
     queryKey: ['followed-artists', userId],
@@ -222,6 +223,15 @@ function ReleasesHero({ userId }) {
         </div>
       )}
 
+      {/* Close button */}
+      <button
+        onClick={onClose}
+        className="absolute top-4 right-4 z-20 w-8 h-8 rounded-full bg-black/40 hover:bg-black/60 flex items-center justify-center text-white/70 hover:text-white transition-colors backdrop-blur-sm"
+        aria-label="Chiudi banner"
+      >
+        <X size={16} />
+      </button>
+
       {/* "Nuove Uscite" pill button */}
       <Link
         to="/nuove-uscite"
@@ -240,10 +250,20 @@ const TABS = [
   { id: 'trending',  label: 'Trending',  icon: TrendingUp },
 ]
 
+const BANNER_KEY = () => `reviewz_banner_closed_${getLastFridayDate()}`
+
 export default function HomePage() {
   const { user } = useAuthStore()
   const [showAuth, setShowAuth] = useState(false)
   const [activeTab, setActiveTab] = useState('following')
+  const [bannerOpen, setBannerOpen] = useState(
+    () => localStorage.getItem(BANNER_KEY()) !== 'true'
+  )
+
+  const closeBanner = () => {
+    localStorage.setItem(BANNER_KEY(), 'true')
+    setBannerOpen(false)
+  }
 
   return (
     <>
@@ -251,7 +271,7 @@ export default function HomePage() {
 
       {user && (
         <>
-          <ReleasesHero userId={user.id} />
+          {bannerOpen && <ReleasesHero userId={user.id} onClose={closeBanner} />}
 
           <div id="feed" className="max-w-2xl mx-auto mt-6">
             {/* Tab bar */}

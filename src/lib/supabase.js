@@ -267,6 +267,14 @@ export const uploadAvatar = async (userId, file) => {
   return profile
 }
 
+export const updateSpotifyProfileUrl = async (userId, spotifyUrl) => {
+  const { error } = await supabase
+    .from('profiles')
+    .update({ spotify_profile_url: spotifyUrl, updated_at: new Date().toISOString() })
+    .eq('id', userId)
+  if (error) throw error
+}
+
 export const uploadCover = async (userId, file) => {
   const ext = file.name.split('.').pop()
   const path = `${userId}/cover.${ext}`
