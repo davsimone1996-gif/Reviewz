@@ -1,15 +1,21 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Music2 } from 'lucide-react'
 import { exchangeCodeForTokens } from '../lib/spotifyAuth'
+import { fetchProfile } from '../lib/supabase'
 import useAuthStore from '../store/authStore'
 
 export default function SpotifyCallbackPage() {
   const [error, setError] = useState(null)
   const navigate = useNavigate()
-  const { profile } = useAuthStore()
+  const { user, profile, setProfile } = useAuthStore()
+  const exchanged = useRef(false)
 
   useEffect(() => {
+    // Run only once even in React StrictMode double-invocation
+    if (exchanged.current) return
+    exchanged.current = true
+
     const params = new URLSearchParams(window.location.search)
     const code        = params.get('code')
     const errorParam  = params.get('error')
@@ -34,19 +40,26 @@ export default function SpotifyCallbackPage() {
     sessionStorage.removeItem('spotify_oauth_state')
 
     exchangeCodeForTokens(code)
-      .then(() => {
-        const username = profile?.username
-        if (username) {
-          navigate(`/profile/${username}`, { replace: true })
-        } else {
-          navigate('/', { replace: true })
+      .then(async () => {
+        // If profile is already in store use it; otherwise fetch from Supabase
+        let username = profile?.username
+        if (!username && user?.id) {
+          try {
+            const p = await fetchProfile(user.id)
+            setProfile(p)
+            username = p?.username
+          } catch {
+            // ignore — fall back to home
+          }
         }
+        navigate(username ? `/profile/${username}` : '/', { replace: true })
       })
       .catch((err) => {
         console.error(err)
-        setError('Errore durante la connessione a Spotify. Riprova.')
+        setError(err.message ?? 'Errore durante la connessione a Spotify. Riprova.')
       })
-  }, [navigate, profile])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   return (
     <div className="min-h-[60vh] flex flex-col items-center justify-center gap-4">
@@ -56,7 +69,7 @@ export default function SpotifyCallbackPage() {
 
       {error ? (
         <>
-          <p className="text-red-400 font-medium">{error}</p>
+          <p className="text-red-400 font-medium text-center max-w-xs">{error}</p>
           <button onClick={() => navigate(-1)} className="btn-secondary">
             Torna indietro
           </button>
