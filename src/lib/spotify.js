@@ -113,13 +113,89 @@ export async function getAlbum(spotifyId) {
 }
 
 /**
- * Fetch new releases (uses client credentials – no user auth needed)
- * @param {string} market  ISO 3166-1 alpha-2 country code (default 'IT')
- * @param {number} limit
+ * Fetch new releases for the current/upcoming Friday.
+ * The old /browse/new-releases endpoint was deprecated by Spotify in Nov 2024.
+ * We now use two sources combined and deduplicated:
+ *   1. "New Music Friday" editorial playlists (most accurate for Friday drops)
+ *   2. tag:new search as fallback / extra coverage
  */
-export async function getNewReleases(market = 'IT', limit = 20) {
-  const data = await spotifyFetch(`/browse/new-releases?market=${market}&limit=${limit}`)
-  return (data.albums?.items ?? []).map(normaliseAlbum)
+
+// Spotify-maintained "New Music Friday" public playlists
+const NMF_PLAYLISTS = {
+  IT: '37i9dQZF1DX4JAvHpjipBk',
+  GLOBAL: '37i9dQZF1DXcBWIGoYBM5M',
+}
+
+/** Returns the ISO date string of the most recent Friday (or today if today is Friday) */
+export function getLastFridayDate() {
+  const now = new Date()
+  const day = now.getDay() // 0=Sun … 5=Fri … 6=Sat
+  const daysBack = day === 5 ? 0 : (day + 2) % 7
+  const friday = new Date(now)
+  friday.setDate(now.getDate() - daysBack)
+  return friday.toISOString().slice(0, 10) // YYYY-MM-DD
+}
+
+/** Returns the ISO date string of the next Friday */
+export function getNextFridayDate() {
+  const now = new Date()
+  const day = now.getDay()
+  const daysAhead = day === 5 ? 7 : (5 - day + 7) % 7
+  const friday = new Date(now)
+  friday.setDate(now.getDate() + (daysAhead === 0 ? 7 : daysAhead))
+  return friday.toISOString().slice(0, 10)
+}
+
+export async function getNewReleases(market = 'IT', limit = 50) {
+  const seen = new Set()
+  const results = []
+
+  const addAlbum = (album) => {
+    if (!seen.has(album.spotify_id)) {
+      seen.add(album.spotify_id)
+      results.push(album)
+    }
+  }
+
+  // 1. New Music Friday playlist (market-specific, then global)
+  const playlistIds = market === 'IT'
+    ? [NMF_PLAYLISTS.IT, NMF_PLAYLISTS.GLOBAL]
+    : [NMF_PLAYLISTS.GLOBAL]
+
+  for (const pid of playlistIds) {
+    try {
+      const data = await spotifyFetch(
+        `/playlists/${pid}/tracks?limit=50&market=${market}&fields=items(track(album(id,name,artists,images,external_urls,release_date,total_tracks,album_type)))`
+      )
+      for (const item of data.items ?? []) {
+        const album = item?.track?.album
+        if (album?.id) addAlbum(normaliseAlbum(album))
+      }
+    } catch {
+      // playlist unavailable in this region — continue
+    }
+  }
+
+  // 2. tag:new search (catches singles/EPs not in the playlist)
+  try {
+    const data = await spotifyFetch(
+      `/search?q=tag:new&type=album&market=${market}&limit=50`
+    )
+    for (const album of data.albums?.items ?? []) {
+      addAlbum(normaliseAlbum(album))
+    }
+  } catch {
+    // search unavailable — use playlist results only
+  }
+
+  // Sort by release_date descending, then trim to requested limit
+  return results
+    .sort((a, b) => {
+      const da = a.release_date ? new Date(a.release_date) : new Date(0)
+      const db = b.release_date ? new Date(b.release_date) : new Date(0)
+      return db - da
+    })
+    .slice(0, limit)
 }
 
 /**
