@@ -5,7 +5,7 @@ import Feed from '../components/Feed/Feed'
 import useAuthStore from '../store/authStore'
 import AuthModal from '../components/Auth/AuthModal'
 import Spinner from '../components/UI/Spinner'
-import { Music2, Star, Users, Zap, ArrowRight, UserCheck, TrendingUp, X } from 'lucide-react'
+import { Music2, Star, Users, Zap, ArrowRight, UserCheck, TrendingUp, X, ChevronDown, ChevronUp } from 'lucide-react'
 import { getFollowedArtists } from '../lib/supabase'
 import { getAlbum } from '../lib/spotify'
 import { getLastFridayDate } from '../lib/spotify'
@@ -81,7 +81,7 @@ function formatItalianDate(dateStr) {
   return d.toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric' })
 }
 
-function ReleasesHero({ userId, onClose }) {
+function ReleasesHero({ userId, collapsed, onCollapse, onExpand }) {
   // 1. Fetch followed artists
   const { data: followedArtists, isLoading: loadingArtists } = useQuery({
     queryKey: ['followed-artists', userId],
@@ -163,6 +163,28 @@ function ReleasesHero({ userId, onClose }) {
   const slide = slides[current]
   const { artist: artistRow, album } = slide
 
+  // ── Collapsed strip (same height as tab bar) ──────────────────
+  if (collapsed) {
+    return (
+      <div className="flex items-center gap-3 bg-surface-200/50 p-1 rounded-2xl mb-0 select-none animate-fade-in">
+        {album.cover_url && (
+          <img src={album.cover_url} alt={album.title} className="w-8 h-8 rounded-lg object-cover shrink-0 ml-1" />
+        )}
+        <div className="flex-1 min-w-0">
+          <p className="text-xs font-semibold text-gray-100 truncate leading-tight">{album.title}</p>
+          <p className="text-[11px] text-muted truncate">{artistRow.artist_name}</p>
+        </div>
+        <button
+          onClick={onExpand}
+          className="flex items-center gap-1 text-xs text-muted hover:text-gray-100 transition-colors px-2 py-1.5 rounded-xl hover:bg-surface-300/50 shrink-0"
+        >
+          <ChevronDown size={14} />
+        </button>
+      </div>
+    )
+  }
+
+  // ── Full hero ─────────────────────────────────────────────────
   return (
     <div className="relative h-[70vh] min-h-[400px] overflow-hidden mb-0 select-none">
       {/* Full-bleed blurred background */}
@@ -223,13 +245,13 @@ function ReleasesHero({ userId, onClose }) {
         </div>
       )}
 
-      {/* Close button */}
+      {/* Collapse button */}
       <button
-        onClick={onClose}
+        onClick={onCollapse}
         className="absolute top-4 right-4 z-20 w-8 h-8 rounded-full bg-black/40 hover:bg-black/60 flex items-center justify-center text-white/70 hover:text-white transition-colors backdrop-blur-sm"
-        aria-label="Chiudi banner"
+        aria-label="Riduci banner"
       >
-        <X size={16} />
+        <ChevronUp size={16} />
       </button>
 
       {/* "Nuove Uscite" pill button */}
@@ -250,19 +272,24 @@ const TABS = [
   { id: 'trending',  label: 'Trending',  icon: TrendingUp },
 ]
 
-const BANNER_KEY = () => `reviewz_banner_closed_${getLastFridayDate()}`
+const BANNER_KEY = () => `reviewz_banner_collapsed_${getLastFridayDate()}`
 
 export default function HomePage() {
   const { user } = useAuthStore()
   const [showAuth, setShowAuth] = useState(false)
   const [activeTab, setActiveTab] = useState('following')
-  const [bannerOpen, setBannerOpen] = useState(
-    () => localStorage.getItem(BANNER_KEY()) !== 'true'
+  const [bannerCollapsed, setBannerCollapsed] = useState(
+    () => localStorage.getItem(BANNER_KEY()) === 'true'
   )
 
-  const closeBanner = () => {
+  const collapseBanner = () => {
     localStorage.setItem(BANNER_KEY(), 'true')
-    setBannerOpen(false)
+    setBannerCollapsed(true)
+  }
+
+  const expandBanner = () => {
+    localStorage.removeItem(BANNER_KEY())
+    setBannerCollapsed(false)
   }
 
   return (
@@ -271,7 +298,12 @@ export default function HomePage() {
 
       {user && (
         <>
-          {bannerOpen && <ReleasesHero userId={user.id} onClose={closeBanner} />}
+          <ReleasesHero
+            userId={user.id}
+            collapsed={bannerCollapsed}
+            onCollapse={collapseBanner}
+            onExpand={expandBanner}
+          />
 
           <div id="feed" className="max-w-2xl mx-auto mt-6">
             {/* Tab bar */}
